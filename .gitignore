@@ -1,0 +1,27 @@
+# --- Frontend (Next.js) ---
+apps/frontend/.next/
+apps/frontend/node_modules/
+apps/frontend/.env.local
+apps/frontend/__tests__/
+apps/frontend/package-lock.json
+
+# --- Backend (Python/FastAPI) ---
+apps/backend/.venv/
+apps/backend/.index_data/
+apps/backend/docs/
+apps/backend/memos/
+apps/backend/tests/
+apps/backend/.python-version
+
+# --- Editor/IDE cache ---
+.idea/
+*.swp
+*.swo
+
+# --- Node.js Global ---
+node_modules/
+.next/
+
+# --- macOS system files ---
+.DS_Store
+apps/frontend/node_modules/

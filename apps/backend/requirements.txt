@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+torch
+faiss-cpu
+sentence-transformers
+pytest
+httpx
+pydantic-settings
+pytz>=2024.0
