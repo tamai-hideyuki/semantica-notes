@@ -12,6 +12,8 @@ apps/backend/docs/
 apps/backend/memos/
 apps/backend/tests/
 apps/backend/.python-version
+apps/backend/src/interfaces/dtos/__pycache__/
+
 
 # --- Editor/IDE cache ---
 .idea/
