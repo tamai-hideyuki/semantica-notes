@@ -4,13 +4,26 @@ import { apiClient } from '@lib/apiClient'
 export type ProgressData = { processed: number; total: number }
 
 export const useVectorizeProgress = (enabled: boolean) =>
-    useQuery<ProgressData, Error>({
+    useQuery<
+        ProgressData,              // queryFn の戻り値
+        Error,                     // エラー型
+        ProgressData,              // data プロパティに格納される型
+        ['vectorize-progress']     // queryKey のタプル型
+    >({
         queryKey: ['vectorize-progress'],
-        queryFn: () => apiClient.getVectorizeProgress(),
+        queryFn:  () => apiClient.getVectorizeProgress(),
         enabled,
-        // データ受信後、processed < total の間だけ 1秒ごとにポーリング
-        refetchInterval: ({ state }) => {
-            const d = state.data
-            return enabled && d && d.processed < d.total ? 1000 : false
+
+        // 第一引数が Query オブジェクト型なので、state.data を参照
+        refetchInterval: (query) => {
+            const d = query.state.data
+            if (!enabled || !d) return false
+            // 完了前だけ１秒ごとに再フェッチ
+            return d.processed < d.total ? 1000 : false
         },
+
+        // フォーカス時・マウント時・再接続時の自動再フェッチをオフ
+        refetchOnWindowFocus: false,
+        refetchOnMount:       false,
+        refetchOnReconnect:   false,
     })

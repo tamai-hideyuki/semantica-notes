@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-query';
 import { createMemo as runCreate } from '../../core/usecases/createMemo';
-import type { MemoCreateDTO } from '../dtos/MemoCreateDTO';
+import type { MemoCreateDTO } from '@dtos/MemoCreateDTO';
 
 export function useCreateMemo(): UseMutationResult<{ status: string; uuid: string }, Error, MemoCreateDTO> {
     const queryClient = useQueryClient();

@@ -1,47 +1,193 @@
 .container {
+    /* アンティーク調の紙色バックで全体を包む */
+    background: #fcf6e0;
+    /* 落ち着いたダークブラウンの文字色 */
+    color: #3c2f2f;
+    /* セリフ体 */
+    font-family: 'Georgia', serif;
     padding: 2rem;
-    font-family: Arial, sans-serif;
+    min-height: 100vh;
 }
 
-.categoryList {
-    margin-bottom: 1rem;
+/* ── 見出しスタイル ── */
+.heading {
+    font-family: 'Palatino Linotype', 'Book Antiqua', serif;
+    color: #4e3723;
+    font-size: 2.2rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    letter-spacing: 1px;
+    text-shadow: 5px 2px 2px rgba(0,0,0,0.1);
 }
 
+
+/* ── カードコンテナ（フォーム） ── */
+.card {
+    /* 半透明の白背景で紙質感を再現 */
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #c49e6c; /* 茶系の枠線で落ち着いた印象 */
+    border-radius: 8px;        /* 角を丸めて柔らかさを */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* 軽いシャドウでカード感 */
+    padding: 1rem;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto 2rem; /* 中央揃え＆下に余白 */
+}
+
+/* ── フォーム要素 ── */
 .form {
     display: grid;
-    gap: 1rem;
-    max-width: 600px;
+    gap: 1rem;  /* 入力間の余白 */
 }
 
-.submitButton {
-    padding: 0.5rem 1rem;
+/* テキスト入力・テキストエリアの共通ベース */
+.input,
+.textarea {
+    width: 100%;
     font-size: 1rem;
+    color: #3c2f2f;
+    transition: border-color 0.2s;
 }
 
-.resultBox {
-    margin-top: 1rem;
-    padding: 1rem;
-    border: 1px solid #ddd;
+/* テキスト入力フィールド */
+.input {
+    border: none;
+    border-bottom: 1px solid #c49e6c; /* 下線のみで上品に */
+    background: transparent;
+    padding: 0.5rem 0;
+}
+.input::placeholder {
+    color: #a08970; /* 薄い茶色のプレースホルダー */
+}
+.input:focus {
+    outline: none;
+    border-bottom-color: #8b5e3c; /* フォーカス時に濃い茶色 */
 }
 
-.footer {
-    margin-top: 2rem;
-    border-top: 1px solid #eee;
-    padding-top: 1rem;
+/* テキストエリア */
+.textarea {
+    border: 1px solid #c49e6c;
+    border-radius: 4px;
+    /* 紙の罫線風背景パターン */
+    background: repeating-linear-gradient(
+            to bottom,
+            transparent,
+            transparent 1.5rem,
+            rgba(196,158,108,0.4) 1.5rem,
+            rgba(196,158,108,0.4) 1.52rem
+    );
+    padding: 0.5rem;
+    resize: vertical;
+}
+.textarea::placeholder {
+    color: #a08970;
+}
+.textarea:focus {
+    outline: none;
+    border-color: #8b5e3c;
 }
 
-.vectorButton {
-    padding: 0.5rem 1rem;
+/* ── 汎用ボタンスタイル ── */
+.button {
+    background: #8b5e3c;
+    color: #fdf5e6;
+    border: 1px solid #6f492a;
+    border-radius: 4px;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+    transition: background 0.2s;
+}
+.button:hover:enabled {
+    background: #9c6e43;
+}
+.button:disabled {
+    background: #b0a18a;
+    cursor: not-allowed;
+    opacity: 0.8;
 }
 
-.vectorStatus {
-    margin-top: 0.5rem;
+/* ボタンの状態別カラー */
+.loading      { background: #a67c52; cursor: wait; }
+.successState { background: #557153; }
+.errorState   { background: #a14a3c; animation: shake 0.3s; }
+
+/* エラーメッセージ／成功メッセージ */
+.error   { color: #a14a3c; margin-top: 0.5rem; font-style: italic; }
+.success { color: #557153; margin-top: 0.5rem; font-style: italic; }
+
+/* カード内を紙と革のセクションに分ける */
+.vectorizeSection {
+    position: relative;          /* ボタン絶対配置の基準 */
+    padding-bottom: 5rem;        /* ボタン高さ＋余白を確保 */
+    max-width: 640px;
+    margin: 0 auto 3rem;         /* 下に余白を拡張 */
 }
 
+/* “ベクトル化を実行”ボタン */
+.vectorizeSection .vectorButton {
+    position: absolute;
+    bottom: 0.5rem;                /* セクション下端からのオフセット */
+    left: 50%;
+    transform: translateX(-50%); /* 完全中央寄せ */
+
+    width: 27%;                  /* 親幅の3/4を指定 */
+    background: linear-gradient(135deg, #a67c52 0%, #8b5e3c 100%);
+    color: #fdf5e6;
+    border: 2px solid #6f492a;
+    border-radius: 6px;
+    padding: 0.32rem 0;          /* 横パディングを省いて高さ情報はpadding上下で調整 */
+    font-family: 'Palatino Linotype', serif;
+    font-size: 1.05rem;
+    font-style: italic;
+    letter-spacing: 0.5px;
+    box-shadow: inset 0 -2px 4px rgba(0,0,0,0.2), 0 3px 6px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.15s ease;
+}
+
+.vectorizeSection .vectorButton:hover:enabled {
+    background: linear-gradient(135deg, #8b5e3c 0%, #6f492a 100%);
+    transform: translate(-50%, -2px); /* X 軸はそのまま、Y 軸だけ上に2px */
+}
+
+.vectorizeSection .vectorButton:active {
+    transform: translate(-50%, 1px); /* クリック時に下へ */
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+}
+
+.vectorizeSection .vectorButton:disabled {
+    background: #b0a18a;
+    border-color: #998763;
+    color: #e0d8c0;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* ── リンク（戻る） ── */
 .backLink {
+    display: block;
+    text-align: center;
     margin-top: 2rem;
+    color: #6f492a;
+    font-weight: bold;
+    text-decoration: underline;
+}
+.backLink:hover {
+    opacity: 0.9;
 }
 
-.error {
-    color: red;
+/* ▽ エラースパイクを震わせるアニメーション ▽ */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25%, 75% { transform: translateX(-4px); }
+    50% { transform: translateX(4px); }
 }
+
+.successMessage {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    margin-top: 0.5rem;
+    color: #2f8e2f;
+}
+.visible { opacity: 1; }
