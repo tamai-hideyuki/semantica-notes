@@ -18,6 +18,13 @@ export function HomePage() {
     const isError = status === 'error'
     const isSuccess = status === 'success'
 
+    // 空チェック
+    const isFormEmpty =
+        !form.category.trim() &&
+        !form.title.trim() &&
+        !form.tags.trim() &&
+        !form.body.trim();
+
     const handleChange = (
         e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ) => {
@@ -87,7 +94,11 @@ export function HomePage() {
                         placeholder="本文"
                         className={styles.textarea}
                     />
-                    <button type="submit" disabled={isLoading} className={buttonClasses}>
+                    <button
+                        type="submit"
+                        disabled={isLoading || isFormEmpty}
+                        className={buttonClasses}
+                    >
                         {isLoading ? '保存中…' : '保存'}
                     </button>
                 </form>
