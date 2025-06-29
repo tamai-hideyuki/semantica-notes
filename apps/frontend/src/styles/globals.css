@@ -1,9 +1,44 @@
+/* リセット */
 *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
-body {
+
+/* ベース設定 */
+html, body {
+    width: 100%;
+    height: 100%;
     font-family: Arial, sans-serif;
     line-height: 1.6;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+}
+
+/* カラーテーマ変数 */
+:root {
+    --color-primary: #4f46e5;
+    --color-accent: #10b981;
+    --color-bg: #f9fafb;
+    --color-text: #1f2937;
+    --color-border: #e5e7eb;
+    --color-error: #ef4444;
+    --color-success: #16a34a;
+}
+
+[data-theme="dark"] {
+    --color-bg: #1f2937;
+    --color-text: #f9fafb;
+    --color-border: #374151;
+}
+
+/* リンクの既定スタイル */
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* ユーティリティ */
+.hidden {
+    display: none !important;
 }

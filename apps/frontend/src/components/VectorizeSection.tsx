@@ -4,7 +4,12 @@ import { useVectorizeProgress }   from '@hooks/useVectorizeProgress'
 import Button      from './Button'
 import ProgressBar from './ProgressBar'
 
-const VectorizeSection: React.FC = () => {
+type VectorizeSectionProps = {
+    /** ボタンクラス名を受け取る */
+    buttonClassName?: string
+}
+
+const VectorizeSection: React.FC<VectorizeSectionProps> = ({ buttonClassName }) => {
     // Mutation の結果として、status を受け取る
     const { mutate, status } = useIncrementalVectorize()
 
@@ -21,9 +26,9 @@ const VectorizeSection: React.FC = () => {
     const isVectorizing = isLoading || processed < total
 
     return (
-        <div className="space-y-2 p-4 border rounded-lg">
+        <div className="relative p-4 border rounded-lg h-full flex flex-col">
             <Button
-                variant="secondary"
+                className={buttonClassName}
                 onClick={() => mutate()}
                 disabled={isVectorizing}
             >
@@ -37,7 +42,7 @@ const VectorizeSection: React.FC = () => {
             )}
 
             {!isVectorizing && isSuccess && total > 0 && (
-                <p className="text-green-600 text-sm mt-2">✅ ベクトル化 完了！</p>
+                <p className="text-green-600 text-sm mt-2">ベクトル化 完了！</p>
             )}
         </div>
     )
