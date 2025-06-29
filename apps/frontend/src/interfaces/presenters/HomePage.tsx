@@ -1,6 +1,6 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react'
-import { useCreateMemo } from '../controllers/useCreateMemo'
-import type { MemoCreateDTO } from '../dtos/MemoCreateDTO'
+import { useCreateMemo } from '@controllers/useCreateMemo'
+import type { MemoCreateDTO } from '@dtos/MemoCreateDTO'
 import Link from 'next/link'
 import VectorizeSection from '@components/VectorizeSection'
 import styles from '../../styles/HomePage.module.css'

@@ -1,5 +1,5 @@
-import { MemoCreateDTO } from '../../interfaces/dtos/MemoCreateDTO'
-import { apiClient } from '../../infrastructure/api/apiClient'
+import { MemoCreateDTO } from '@dtos/MemoCreateDTO'
+import { apiClient } from '@api/apiClient'
 
 /**
  * メモ作成ユースケース

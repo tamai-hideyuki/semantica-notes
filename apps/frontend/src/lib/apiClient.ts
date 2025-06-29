@@ -1,6 +1,6 @@
 import axios from 'axios';
-import type { SearchResultDTO } from '../interfaces/dtos/SearchResultDTO';
-import type { MemoCreateDTO } from '../interfaces/dtos/MemoCreateDTO';
+import type { SearchResultDTO } from '@dtos/SearchResultDTO';
+import type { MemoCreateDTO } from '@dtos/MemoCreateDTO';
 
 // ──── BASE URL ────
 const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';

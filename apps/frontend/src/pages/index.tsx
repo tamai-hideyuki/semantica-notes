@@ -1,4 +1,4 @@
-import { HomePage } from '../interfaces/presenters/HomePage';
+import { HomePage } from '@presenters/HomePage';
 
 export default function Home() {
     return <HomePage />;

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@lib/apiClient'
-import type { SearchResultDTO } from '../dtos/SearchResultDTO'
+import type { SearchResultDTO } from '@dtos/SearchResultDTO'
 
 export const useSearchMemos = (query: string) =>
     useQuery<SearchResultDTO[], Error>({

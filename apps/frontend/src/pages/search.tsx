@@ -1,4 +1,4 @@
-import { SearchPage } from '../interfaces/presenters/SearchPage';
+import { SearchPage } from '@presenters/SearchPage';
 
 export default function Search() {
     return <SearchPage />;
