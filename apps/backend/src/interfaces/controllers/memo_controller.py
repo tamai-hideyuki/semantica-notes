@@ -1,5 +1,6 @@
 import logging
 from typing import List
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
@@ -9,6 +10,15 @@ from src.interfaces.dtos.memo_dto import MemoDTO
 
 from src.interfaces.controllers.common import get_search_uc, get_create_uc
 from src.infrastructure.utils.datetime_jst import now_jst
+
+from src.interfaces.repositories.memo_repo import MemoRepository
+from src.infrastructure.persistence.fs_memo_repo import FileSystemMemoRepository
+from src.usecases.list_categories import list_categories
+from src.usecases.list_tags       import list_tags
+
+HERE     = Path(__file__).resolve()
+BACKEND  = HERE.parents[3]
+MEMO_DIR = BACKEND / "memos"
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["memo"])
@@ -35,7 +45,6 @@ async def search_memos(
         return []
 
     try:
-        # ドメインモデル → DTO に変換して返す
         domain_results = await uc.execute(query)
         return [SearchResultDTO.from_domain(m) for m in domain_results]
     except Exception:
@@ -64,7 +73,6 @@ async def create_memo(
             body=dto.body,
             tags=dto.tags,
             category=dto.category,
-            # dto.created_at が None のときは now_jst() を使う
             created_at=dto.created_at or now_jst(),
         )
         logger.debug(f"📤 Created memo uuid={memo.uuid}")
@@ -75,3 +83,25 @@ async def create_memo(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="メモの保存に失敗しました",
         )
+
+
+@router.get(
+    "/tags",
+    response_model=List[str],
+    status_code=status.HTTP_200_OK,
+    summary="既存のタグ一覧を取得",
+)
+async def get_tags() -> List[str]:
+    repo: MemoRepository = FileSystemMemoRepository(root=MEMO_DIR)
+    return await list_tags(repo)
+
+
+@router.get(
+    "/categories",
+    response_model=List[str],
+    status_code=status.HTTP_200_OK,
+    summary="既存のカテゴリ一覧を取得",
+)
+async def get_categories() -> List[str]:
+    repo: MemoRepository = FileSystemMemoRepository(root=MEMO_DIR)
+    return await list_categories(repo)

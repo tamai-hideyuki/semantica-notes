@@ -1,62 +1,60 @@
-import axios from 'axios';
-import type { SearchResultDTO } from '@dtos/SearchResultDTO';
-import type { MemoCreateDTO } from '@dtos/MemoCreateDTO';
+import axios from 'axios'
+import type { SearchResultDTO } from '@dtos/SearchResultDTO'
+import type { MemoCreateDTO } from '@dtos/MemoCreateDTO'
 
 // ──── BASE URL ────
-const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
-const BASE = RAW_BASE.replace(/\/+$/g, '');
-console.debug('[API BASE]', BASE);
+const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
+const BASE     = RAW_BASE.replace(/\/+$/g, '')
+console.debug('[API BASE]', BASE)
 
 // ──── Axios Instance ────
-const client = axios.create({ baseURL: `${BASE}/api` });
+const client = axios.create({ baseURL: `${BASE}/api` })
 
 // ──── 共通ログ関数 ────
 function formatMethod(method?: string) {
-    return (method ?? 'GET').toUpperCase();
+    return (method ?? 'GET').toUpperCase()
 }
 
 // ──── Interceptors ────
 client.interceptors.request.use(
     (config) => {
-        const fullUrl = `${config.baseURL ?? ''}${config.url}`;
-        console.groupCollapsed('[API REQUEST]', formatMethod(config.method), fullUrl);
-        console.debug('Config:', config);
-        if (config.data) console.debug('Payload:', config.data);
-        if (config.params) console.debug('Params:', config.params);
-        console.groupEnd();
-        return config;
+        const fullUrl = `${config.baseURL ?? ''}${config.url}`
+        console.groupCollapsed('[API REQUEST]', formatMethod(config.method), fullUrl)
+        console.debug('Config:', config)
+        if (config.data)   console.debug('Payload:', config.data)
+        if (config.params) console.debug('Params:', config.params)
+        console.groupEnd()
+        return config
     },
     (error) => {
-        console.groupCollapsed('[API REQUEST ERROR]');
-        console.error(error);
-        console.groupEnd();
-        return Promise.reject(error);
+        console.groupCollapsed('[API REQUEST ERROR]')
+        console.error(error)
+        console.groupEnd()
+        return Promise.reject(error)
     }
-);
+)
 
 client.interceptors.response.use(
     (response) => {
-        const { config } = response;
-        const fullUrl = `${config.baseURL ?? ''}${config.url}`;
-        console.groupCollapsed('[API RESPONSE]', formatMethod(config.method), fullUrl);
-        console.debug('Status:', response.status);
-        console.debug('Data:', response.data);
-        console.groupEnd();
-        return response;
+        const { config } = response
+        const fullUrl = `${config.baseURL ?? ''}${config.url}`
+        console.groupCollapsed('[API RESPONSE]', formatMethod(config.method), fullUrl)
+        console.debug('Status:', response.status)
+        console.debug('Data:', response.data)
+        console.groupEnd()
+        return response
     },
     (error) => {
-        const { config } = error;
-        console.groupCollapsed('[API ERROR]', formatMethod(config?.method), config?.url);
-        console.error('Error Message:', error.message);
-        if (error.response) console.error('Response Data:', error.response.data);
-        console.groupEnd();
-        return Promise.reject(error);
+        const { config } = error
+        console.groupCollapsed('[API ERROR]', formatMethod(config?.method), config?.url)
+        console.error('Error Message:', error.message)
+        if (error.response) console.error('Response Data:', error.response.data)
+        console.groupEnd()
+        return Promise.reject(error)
     }
-);
+)
 
 // ──── API Client ────
-
-// クライアント定義
 export const apiClient = {
     post: async <T>(path: string, body?: unknown): Promise<T> =>
         client.post<T>(path, body).then(res => res.data),
@@ -78,5 +76,19 @@ export const apiClient = {
 
     rebuildIndex: () =>
         apiClient.post<{ status: string }>('/admin/rebuild'),
-};
+}
 
+// ──── ヘルパー：カテゴリー／タグ取得 ────
+/**
+ * 既存のカテゴリー一覧を取得する
+ */
+export async function getCategories(): Promise<string[]> {
+    return apiClient.get<string[]>('/categories')
+}
+
+/**
+ * 既存のタグ一覧を取得する
+ */
+export async function getTags(): Promise<string[]> {
+    return apiClient.get<string[]>('/tags')
+}
