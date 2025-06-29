@@ -12,6 +12,12 @@ apps/backend/docs/
 apps/backend/memos/
 apps/backend/tests/
 apps/backend/.python-version
+apps/backend/src/interfaces/dtos/__pycache__/
+apps/backend/src/__pycache__/
+
+# --- docker ---
+
+docker/.env
 
 # --- Editor/IDE cache ---
 .idea/

@@ -8,3 +8,4 @@ pytest
 httpx
 pydantic-settings
 pytz>=2024.0
+aiofiles
