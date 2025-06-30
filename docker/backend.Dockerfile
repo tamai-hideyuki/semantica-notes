@@ -15,6 +15,9 @@ RUN pip install --upgrade pip \
 # ─── 4. ソースをマウントで反映 ─────────────────
 VOLUME [ "/app/apps/backend" ]
 
-# ─── 5. アプリ起動 ───────────────────────────
+# ─── 5.PYTHONPATH を設定 ────────────────────
+ENV PYTHONPATH=/app/apps/backend/src
+
+# ─── 6. アプリ起動 ───────────────────────────
 # (python run.py は内部で uvicorn を立ち上げる)
 CMD ["python", "run.py"]

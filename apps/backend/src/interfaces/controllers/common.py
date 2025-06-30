@@ -51,10 +51,14 @@ def get_create_uc(
 
 @lru_cache()
 def get_search_uc(
-    memo_repo: MemoRepository = Depends(get_memo_repo),
     index_repo: IndexRepository = Depends(get_index_repo),
+    memo_repo: MemoRepository = Depends(get_memo_repo),
 ) -> SearchMemosUseCase:
-    return SearchMemosUseCase(memo_repo, index_repo)
+    """
+    メモ検索用ユースケースを返す
+    """
+    # SearchMemosUseCase は (index_repo, memo_repo) の順で受け取る
+    return SearchMemosUseCase(index_repo, memo_repo)
 
 @lru_cache
 def get_incremental_uc(
