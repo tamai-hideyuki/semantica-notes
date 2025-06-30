@@ -1,0 +1,270 @@
+/* ────────────────────────────────────────── */
+/* ページ全体の背景／フォント／余白設定 */
+/* ────────────────────────────────────────── */
+.container {
+    background: #fcf6e0;           /* アンティーク調の紙色バック */
+    color: #3c2f2f;                /* 落ち着いたダークブラウンの文字色 */
+    font-family: 'Georgia', serif; /* セリフ体フォント */
+    padding: 2rem;                 /* コンテナ内余白 */
+    min-height: 100vh;             /* ビューポート全高を確保 */
+}
+
+/* ────────────────────────────────────────── */
+/* 見出しスタイル */
+/* ────────────────────────────────────────── */
+.heading {
+    font-family: 'Palatino Linotype', 'Book Antiqua', serif; /* クラシックな見出し用セリフ体 */
+    color: #4e3723;                /* 濃いブラウン */
+    font-size: 2.2rem;             /* 大きめ文字サイズ */
+    text-align: center;            /* 中央揃え */
+    margin-bottom: 1.5rem;         /* 下に余白 */
+    letter-spacing: 1px;           /* 文字間スペース */
+    text-shadow: 5px 2px 2px rgba(0,0,0,0.1); /* 立体感を出す軽い影 */
+}
+
+/* ────────────────────────────────────────── */
+/* カードコンテナ（フォームを囲む） */
+/* ────────────────────────────────────────── */
+.card {
+    background: rgba(255,255,255,0.9); /* 半透明ホワイトで紙質感 */
+    border: 1px solid #c49e6c;       /* 茶系細枠 */
+    border-radius: 8px;              /* 角丸 */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* 軽いカードシャドウ */
+    padding: 1rem;                   /* 内側余白 */
+    max-width: 1000px;                /* 最大幅 */
+    width: 100%;                     /* 幅100% */
+    margin: 0 auto 2rem;            /* 中央配置＋下余白 */
+}
+
+/* ────────────────────────────────────────── */
+/* フォーム要素グリッドレイアウト */
+/* ────────────────────────────────────────── */
+.form {
+    display: grid;
+    gap: 1rem; /* 各入力間の間隔 */
+}
+
+/* ────────────────────────────────────────── */
+/* テキスト入力・テキストエリア共通設定 */
+/* ────────────────────────────────────────── */
+.input,
+.textarea {
+    width: 100%;                     /* 幅100% */
+    font-size: 1rem;                 /* 標準文字サイズ */
+    color: #3c2f2f;                  /* 文字色 */
+    transition: border-color 0.2s;   /* フォーカス時のアニメーション */
+    height: 4rem;
+}
+
+/* ────────────────────────────────────────── */
+/* テキスト入力フィールド設定 */
+/* ────────────────────────────────────────── */
+.input {
+    border: none;
+    border-bottom: 1px solid #c49e6c; /* 下線のみ */
+    background: transparent;
+    padding: 0.5rem 0;               /* 上下余白だけ */
+}
+.input::placeholder {
+    color: #a08970;                  /* 薄茶色プレースホルダー */
+}
+.input:focus {
+    outline: none;
+    border-bottom-color: #8b5e3c;    /* フォーカス下線色 */
+}
+
+/* ────────────────────────────────────────── */
+/* テキストエリア設定 */
+/* ────────────────────────────────────────── */
+.textarea {
+    border: 1px solid #c49e6c;       /* 枠線 */
+    border-radius: 4px;              /* 角丸 */
+    background:                       /* 紙の罫線風背景 */
+            repeating-linear-gradient(
+                    to bottom,
+                    transparent,
+                    transparent 1.5rem,
+                    rgba(196,158,108,0.4) 1.5rem,
+                    rgba(196,158,108,0.4) 1.52rem
+            );
+    padding: 0.5rem;                 /* 内側余白 */
+    resize: vertical;                /* 縦のみリサイズ可 */
+
+/* 幅と高さを調整 */
+width: 100%;                     /* 親幅いっぱいに */
+min-height: 12rem;               /* 最低高さ */
+max-height: 24rem;               /* 最大高さ */
+height: 16rem;                   /* 初期表示高さ */
+}
+.textarea::placeholder {
+    color: #a08970;
+}
+.textarea:focus {
+    outline: none;
+    border-color: #8b5e3c;
+}
+
+/* ────────────────────────────────────────── */
+/* 汎用ボタンスタイル */
+/* ────────────────────────────────────────── */
+.button {
+    background: #8b5e3c;             /* ボタン背景色 */
+    color: #fdf5e6;                  /* ボタン文字色 */
+    border: 1px solid #6f492a;
+    border-radius: 4px;
+    padding: 0.75rem 1.5rem;         /* ボタン内余白 */
+    cursor: pointer;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+    transition: background 0.2s;
+}
+.button:hover:enabled {
+    background: #9c6e43;
+}
+.button:disabled {
+    background: #b0a18a;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+/* ────────────────────────────────────────── */
+/* 状態別ボタンカラー */
+/* ────────────────────────────────────────── */
+.loading {
+    background: #a67c52 !important;
+    cursor: wait !important;
+}
+.successState {
+    background: #557153 !important;
+}
+.errorState {
+    background: #a14a3c !important;
+    animation: shake 0.3s;
+}
+
+/* ────────────────────────────────────────── */
+/* エラーメッセージ／成功メッセージ */
+/* ────────────────────────────────────────── */
+.error {
+    color: #a14a3c;
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+.success {
+    color: #557153;
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+/* ────────────────────────────────────────── */
+/* ボタンを絶対配置する親セクション */
+/* ────────────────────────────────────────── */
+.vectorizeSection {
+    position: relative;
+    padding-bottom: 5rem; /* 下部ボタン高さ分の余白 */
+    margin-top: 1rem;
+}
+
+/* ────────────────────────────────────────── */
+/* “保存”ボタン（ベクトル化ボタン風） */
+/* ────────────────────────────────────────── */
+.vectorButton {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 27%;
+    background: linear-gradient(135deg, #a67c52 0%, #8b5e3c 100%);
+    color: #fdf5e6;
+    border: 2px solid #6f492a;
+    border-radius: 6px;
+    padding: 0.32rem 0;
+    font-family: 'Palatino Linotype', serif;
+    font-size: 1.05rem;
+    font-style: italic;
+    letter-spacing: 0.5px;
+    box-shadow: inset 0 -2px 4px rgba(0,0,0,0.2), 0 3px 6px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.15s ease;
+}
+.vectorButton:hover:enabled {
+    background: linear-gradient(135deg, #8b5e3c 0%, #6f492a 100%);
+    transform: translate(-50%, -2px);
+}
+.vectorButton:active {
+    transform: translate(-50%, 1px);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+}
+.vectorButton:disabled {
+    background: #b0a18a;
+    border-color: #998763;
+    color: #e0d8c0;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* ────────────────────────────────────────── */
+/* 戻るリンク */
+/* ────────────────────────────────────────── */
+.backLink {
+    display: block;
+    text-align: center;
+    margin-top: 2rem;
+    color: #6f492a;
+    font-weight: bold;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    font-family: 'Georgia', serif;
+    cursor: pointer;
+}
+.backLink:hover {
+    opacity: 0.9;
+}
+
+/* ────────────────────────────────────────── */
+/* 成功メッセージ表示用クラス */
+/* ────────────────────────────────────────── */
+.visible {
+    opacity: 1;
+}
+
+/* ────────────────────────────────────────── */
+/* シェイクアニメーション（エラー時） */
+/* ────────────────────────────────────────── */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25%, 75% { transform: translateX(-4px); }
+    50% { transform: translateX(4px); }
+}
+
+
+/* ────────────────────────────────────────── */
+/* 削除ボタン */
+/* ────────────────────────────────────────── */
+.linkGroup {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+/* 削除ボタン */
+.deleteButton {
+    background: #a14a3c;
+    color: #fdf5e6;
+    border: 1px solid #7f2f2f;
+    border-radius: 6px;
+    padding: 0.75rem 1.5rem;
+    font-family: 'Palatino Linotype', serif;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.deleteButton:hover:enabled {
+    background: #c04b4b;
+}
+.deleteButton:disabled {
+    background: #d8a3a3;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
