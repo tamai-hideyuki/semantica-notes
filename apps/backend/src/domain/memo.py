@@ -1,17 +1,20 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List
+from typing import List, Optional
+import numpy as np
 
-
-@dataclass(frozen=True)
+@dataclass
 class Memo:
-    uuid: str
-    title: str
-    body: str
-    category: str
-    tags: List[str]
+    uuid:       str
+    title:      str
+    body:       str
+    category:   str
+    tags:       List[str]
     created_at: datetime
-    score: float = 0.0
+    score:      float = 0.0
+
+    # 埋め込みベクトル用フィールド（初期は None）
+    embedding: Optional[np.ndarray] = None
 
     @property
     def snippet(self) -> str:

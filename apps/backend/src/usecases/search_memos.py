@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from dataclasses import replace
 import asyncio
 from sentence_transformers import SentenceTransformer
@@ -19,7 +19,7 @@ class SearchMemosUseCase:
         self.index_repo = index_repo
         self.memo_repo = memo_repo
 
-    async def execute(self, query: str, top_k: int = 10) -> List[Memo]:
+    async def execute(self, query: str, top_k: int = 100) -> List[Memo]:
         # ① クエリをベクトル化
         qvec = self._embed(query)
 

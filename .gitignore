@@ -1,53 +1,34 @@
 # --- Frontend (Next.js) ---
-apps/frontend/.next/
-apps/frontend/node_modules/
-apps/frontend/.env.local
-apps/frontend/__tests__/
-apps/frontend/package-lock.json
+/apps/frontend/.next/
+/apps/frontend/node_modules/
+/apps/frontend/.env.local
+/apps/frontend/__tests__/
+/apps/frontend/package-lock.json
 
 # --- Backend (Python/FastAPI) ---
-apps/backend/.venv/
-apps/backend/.index_data/
-apps/backend/docs/
-apps/backend/memos/
-apps/backend/tests/docs/
-apps/backend/src/domain/__pycache__/
-apps/backend/dependency_analyzer/docs/docs01.md
-apps/backend/.python-version
-apps/backend/src/interfaces/dtos/__pycache__/
-apps/backend/src/__pycache__/
-apps/backend/dependency_analyzer/__pycache__/
-src/infrastructure/persistence/__pycache__/
-src/infrastructure/utils/__pycache__/
-src/interfaces/controllers/__pycache__/
-src/interfaces/repositories/__pycache__/
-src/interfaces/utils/__pycache__/
-src/usecases/__pycache__/
-apps/backend/tests/unit/__pycache__/
-apps/backend/src/infrastructure/persistence/__pycache__/
-apps/backend/src/infrastructure/utils/__pycache__/
-apps/backend/src/interfaces/controllers/__pycache__/
-apps/backend/src/interfaces/repositories/__pycache__/
-apps/backend/src/interfaces/utils/__pycache__/
-apps/backend/src/usecases/__pycache__/
-
+/apps/backend/.venv/
+/apps/backend/.index_data/
+/apps/backend/docs/
+/apps/backend/memos/
+/apps/backend/dependency_analyzer/docs/
+/apps/backend/.python-version
 apps/backend/deps.dot
+# キャッシュ・ビルド成果物
+**/__pycache__/
+/**/*.py[cod]
+**/.pytest_cache/
 
-# --- tests ---
-apps/backend/tests/__pycache__/
-# --- docker ---
-
-docker/.env
-
-# --- Editor/IDE cache ---
+# IDE / エディタ
 .idea/
-*.swp
-*.swo
+/*.swp
+/*.swo
 
-# --- Node.js Global ---
-node_modules/
-.next/
+# Docker 環境変数
+/docker/.env
 
-# --- macOS system files ---
+# Node.js 全体
+/node_modules/
+/.next/
+
+# macOS システムファイル
 .DS_Store
-apps/frontend/node_modules/

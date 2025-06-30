@@ -88,13 +88,22 @@ export function SearchPage() {
                 className={styles.modal}
                 overlayClassName={styles.overlay}
             >
-                {selected && (
-                    <div className={styles.detailCard}>
+            {selected && (
+                <div className={styles.detailCard}>
                         <h2 className={styles.detailTitle}>{selected.title}</h2>
                         <pre className={styles.fullBody}>{selected.body}</pre>
-                        <button onClick={() => setSelected(null)} className={styles.closeButton}>閉じる</button>
+
+                        {/* 編集ボタン */}
+                        <div className={styles.actions}>
+                          <Link href={`/memos/${selected.uuid}/edit`}>
+                            <button className={styles.editButton}>✏️ 編集</button>
+                          </Link>
+                          <button onClick={() => setSelected(null)} className={styles.closeButton}>
+                            閉じる
+                          </button>
+                        </div>
                     </div>
-                )}
+            )}
             </Modal>
 
             <Link href="/" className={styles.backLink}>⏎ 戻る</Link>
