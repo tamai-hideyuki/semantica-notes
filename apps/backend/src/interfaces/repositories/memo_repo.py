@@ -1,8 +1,6 @@
-# src/interfaces/repositories/memo_repo.py
-
 from abc import ABC, abstractmethod
 from typing import List, Set
-from src.domain.memo import Memo
+from domain.memo import Memo
 
 class MemoNotFoundError(Exception):
     """指定された UUID のメモが見つからなかったときに投げられる例外"""

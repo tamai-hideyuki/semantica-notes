@@ -10,7 +10,7 @@ class Settings(BaseSettings):
         env_file=REPO_ROOT / ".env",
         env_file_encoding="utf-8",
         env_prefix="VEC_",
-        frozen=True,
+        frozen=False, # テストでの上書きを許可するため mutable に設定
     )
 
     # アプリ情報

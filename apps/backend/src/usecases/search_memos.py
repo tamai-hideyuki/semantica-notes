@@ -2,7 +2,7 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 import asyncio
 from typing import List
-from src.domain.memo import Memo
+from domain.memo import Memo
 
 class SearchMemosUseCase:
     _embedder = SentenceTransformer("sentence-transformers/LaBSE")

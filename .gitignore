@@ -10,13 +10,31 @@ apps/backend/.venv/
 apps/backend/.index_data/
 apps/backend/docs/
 apps/backend/memos/
-apps/backend/tests/
+apps/backend/tests/docs/
+apps/backend/src/domain/__pycache__/
 apps/backend/dependency_analyzer/docs/docs01.md
 apps/backend/.python-version
 apps/backend/src/interfaces/dtos/__pycache__/
 apps/backend/src/__pycache__/
 apps/backend/dependency_analyzer/__pycache__/
+src/infrastructure/persistence/__pycache__/
+src/infrastructure/utils/__pycache__/
+src/interfaces/controllers/__pycache__/
+src/interfaces/repositories/__pycache__/
+src/interfaces/utils/__pycache__/
+src/usecases/__pycache__/
+apps/backend/tests/unit/__pycache__/
+apps/backend/src/infrastructure/persistence/__pycache__/
+apps/backend/src/infrastructure/utils/__pycache__/
+apps/backend/src/interfaces/controllers/__pycache__/
+apps/backend/src/interfaces/repositories/__pycache__/
+apps/backend/src/interfaces/utils/__pycache__/
+apps/backend/src/usecases/__pycache__/
+
 apps/backend/deps.dot
+
+# --- tests ---
+apps/backend/tests/__pycache__/
 # --- docker ---
 
 docker/.env
