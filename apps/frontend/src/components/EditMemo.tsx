@@ -3,7 +3,7 @@ import type { MemoDTO } from '@dtos/MemoDTO'
 import { apiClient }    from '@lib/apiClient'
 import { useRouter }    from 'next/router'
 import Link             from 'next/link'
-import styles           from '../../styles/EditMemo.module.css'
+import styles           from '@styles/EditMemo.module.css'
 
 type Props = {
     initial: MemoDTO
@@ -17,22 +17,27 @@ export const EditMemo: React.FC<Props> = ({ initial, onSaved }) => {
     const [loading, setLoading] = useState(false)
     const [error, setError]     = useState<string | null>(null)
 
+
     const handleSave = async () => {
-        if (loading) return
-        setLoading(true)
-        setError(null)
+        if (loading) return;
+        setLoading(true);
+        setError(null);
 
         try {
-            const updated = await apiClient.updateMemo(initial.uuid, { title, body })
-            onSaved?.(updated)
-            // 保存後はトップへ
-            await router.replace('/search')
+            const updated = await apiClient.updateMemo(initial.uuid, { title, body });
+
+            // ① まず検索ページへ遷移
+            await router.replace('/search');
+
+            // ② そのあとで onSaved（必要なら）
+            onSaved?.(updated);
         } catch (e: any) {
-            setError(e.message || '更新に失敗しました')
+            setError(e.message || '更新に失敗しました');
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
+    };
+
 
     return (
         <div className={styles.container}>
@@ -78,11 +83,7 @@ export const EditMemo: React.FC<Props> = ({ initial, onSaved }) => {
 
             <div className={styles.linkGroup}>
                 <Link href="/search" className={styles.backLink}>
-                    ⏎ 戻る
-                </Link>
-
-                <Link href="/search" className={styles.backLink}>
-                    → メモ検索ページへ
+                    → メモ検索ページへ戻る
                 </Link>
             </div>
         </div>

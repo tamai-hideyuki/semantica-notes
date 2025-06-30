@@ -2,7 +2,7 @@ import { useRouter }       from 'next/router'
 import { useEffect, useState } from 'react'
 import type { MemoDTO }    from '@dtos/MemoDTO'
 import { apiClient }       from '@lib/apiClient'
-import { EditMemo }        from '@presenters/EditMemo'
+import { EditMemo }        from '@components/EditMemo'
 
 const EditPage: React.FC = () => {
     const router = useRouter()
@@ -22,11 +22,12 @@ const EditPage: React.FC = () => {
     if (!memo)   return <p>メモが見つかりませんでした</p>
 
     return (
-        <EditMemo
+                <EditMemo
             initial={memo}
-            onSaved={() => router.push(`/memos/${uuid}`)}
-        />
-    )
+                // 保存後にメモ検索ページへ
+                onSaved={() => router.replace('/search')}
+            />
+        )
 }
 
 export default EditPage
