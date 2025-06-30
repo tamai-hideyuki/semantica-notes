@@ -2,13 +2,13 @@ import logging
 from uuid import uuid4
 from typing import Optional, List, TYPE_CHECKING
 
-from src.domain.memo import Memo
-from src.interfaces.repositories.memo_repo import MemoRepository
+from domain.memo import Memo
+from interfaces.repositories.memo_repo import MemoRepository
 
-from src.infrastructure.utils.datetime_jst import now_jst
+from infrastructure.utils.datetime_jst import now_jst
 
 if TYPE_CHECKING:
-    from src.interfaces.repositories.index_repo import IndexRepository
+    from interfaces.repositories.index_repo import IndexRepository
 
 logger = logging.getLogger(__name__)
 

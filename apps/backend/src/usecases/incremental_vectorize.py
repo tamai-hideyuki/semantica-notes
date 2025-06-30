@@ -3,9 +3,9 @@ from fastapi import FastAPI
 import numpy as np
 from anyio import to_thread
 
-from src.domain.memo import Memo
-from src.interfaces.repositories.memo_repo import MemoRepository
-from src.interfaces.repositories.index_repo import IndexRepository
+from domain.memo import Memo
+from interfaces.repositories.memo_repo import MemoRepository
+from interfaces.repositories.index_repo import IndexRepository
 
 class IncrementalVectorizeUseCase:
     def __init__(

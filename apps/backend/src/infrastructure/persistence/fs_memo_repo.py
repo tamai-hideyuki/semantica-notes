@@ -8,9 +8,9 @@ from typing import List, Optional
 
 import aiofiles
 
-from src.domain.memo import Memo
-from src.interfaces.repositories.memo_repo import MemoNotFoundError, MemoRepository
-from src.infrastructure.utils.datetime_jst import now_jst
+from domain.memo import Memo
+from interfaces.repositories.memo_repo import MemoNotFoundError, MemoRepository
+from infrastructure.utils.datetime_jst import now_jst
 
 logger = logging.getLogger(__name__)
 

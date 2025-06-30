@@ -1,9 +1,9 @@
 import logging
 from fastapi import APIRouter, Depends, BackgroundTasks, Request, status, HTTPException
 
-from src.interfaces.controllers.common import get_memo_repo, get_index_repo, get_progress_uc
-from src.usecases.incremental_vectorize import IncrementalVectorizeUseCase
-from src.usecases.get_progress import GetVectorizeProgressUseCase
+from interfaces.controllers.common import get_memo_repo, get_index_repo, get_progress_uc
+from usecases.incremental_vectorize import IncrementalVectorizeUseCase
+from usecases.get_progress import GetVectorizeProgressUseCase
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 logger = logging.getLogger(__name__)

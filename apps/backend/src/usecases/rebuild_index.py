@@ -1,8 +1,8 @@
 from typing import List
 
-from src.interfaces.repositories.index_repo import IndexRepository
-from src.interfaces.repositories.memo_repo import MemoRepository
-from src.domain.memo import Memo
+from interfaces.repositories.index_repo import IndexRepository
+from interfaces.repositories.memo_repo import MemoRepository
+from domain.memo import Memo
 
 class RebuildIndexUseCase:
     def __init__(self, index_repo: IndexRepository, memo_repo: MemoRepository):

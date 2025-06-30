@@ -4,17 +4,17 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-from src.interfaces.dtos.search_dto import SearchRequestDTO, SearchResultDTO
-from src.interfaces.dtos.create_memo_dto import CreateMemoDTO
-from src.interfaces.dtos.memo_dto import MemoDTO
+from interfaces.dtos.search_dto import SearchRequestDTO, SearchResultDTO
+from interfaces.dtos.create_memo_dto import CreateMemoDTO
+from interfaces.dtos.memo_dto import MemoDTO
 
-from src.interfaces.controllers.common import get_search_uc, get_create_uc
-from src.infrastructure.utils.datetime_jst import now_jst
+from interfaces.controllers.common import get_search_uc, get_create_uc
+from infrastructure.utils.datetime_jst import now_jst
 
-from src.interfaces.repositories.memo_repo import MemoRepository
-from src.infrastructure.persistence.fs_memo_repo import FileSystemMemoRepository
-from src.usecases.list_categories import list_categories
-from src.usecases.list_tags       import list_tags
+from interfaces.repositories.memo_repo import MemoRepository
+from infrastructure.persistence.fs_memo_repo import FileSystemMemoRepository
+from usecases.list_categories import list_categories
+from usecases.list_tags       import list_tags
 
 HERE     = Path(__file__).resolve()
 BACKEND  = HERE.parents[3]

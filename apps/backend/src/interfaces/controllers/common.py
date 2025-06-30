@@ -2,44 +2,61 @@ import logging
 from functools import lru_cache
 from fastapi import Depends, Request
 
-from src.config import settings
+from config import settings
 
 # 抽象インターフェイスだけをインポート
-from src.interfaces.repositories.memo_repo import MemoRepository
-from src.interfaces.repositories.index_repo import IndexRepository
+from interfaces.repositories.memo_repo import MemoRepository
+from interfaces.repositories.index_repo import IndexRepository
 
-from src.usecases.search_memos import SearchMemosUseCase
-from src.usecases.create_memo import CreateMemoUseCase
-from src.usecases.incremental_vectorize import IncrementalVectorizeUseCase
-from src.usecases.get_progress import GetVectorizeProgressUseCase
+# ユースケース抽象インターフェース
+from usecases.create_memo import CreateMemoUseCase
+from usecases.search_memos import SearchMemosUseCase
+from usecases.incremental_vectorize import IncrementalVectorizeUseCase
+from usecases.get_progress import GetVectorizeProgressUseCase
+
+# 日時プロバイダ
+from interfaces.utils.datetime import DateTimeProvider
 
 logger = logging.getLogger(__name__)
 
-# 依存先の型は抽象インターフェイス
 @lru_cache()
 def get_memo_repo() -> MemoRepository:
-    raise RuntimeError("ここは main.py でオーバーライドした方がいいですな")
+    """
+    抽象リポジトリプロバイダ（DIで具体実装とバインド）
+    """
+    ...  # main.py でオーバーライド
 
 @lru_cache()
 def get_index_repo(
     memo_repo: MemoRepository = Depends(get_memo_repo),
 ) -> IndexRepository:
-    raise RuntimeError("ここは main.py でオーバーライドした方がいいですな")
+    """
+    抽象インデックスリポジトリプロバイダ
+    """
+    ...
 
 @lru_cache()
-def get_search_uc(
-    index_repo: IndexRepository = Depends(get_index_repo),
-    memo_repo: MemoRepository = Depends(get_memo_repo),
-) -> SearchMemosUseCase:
-    return SearchMemosUseCase(index_repo, memo_repo)
+def get_datetime_provider() -> DateTimeProvider:
+    """
+    抽象日時プロバイダ
+    """
+    ...
 
 @lru_cache()
 def get_create_uc(
     memo_repo: MemoRepository = Depends(get_memo_repo),
-    index_repo: IndexRepository = Depends(get_index_repo),
+    dt_provider: DateTimeProvider = Depends(get_datetime_provider),
 ) -> CreateMemoUseCase:
-    return CreateMemoUseCase(memo_repo, index_repo)
+    return CreateMemoUseCase(memo_repo, dt_provider)
 
+@lru_cache()
+def get_search_uc(
+    memo_repo: MemoRepository = Depends(get_memo_repo),
+    index_repo: IndexRepository = Depends(get_index_repo),
+) -> SearchMemosUseCase:
+    return SearchMemosUseCase(memo_repo, index_repo)
+
+@lru_cache
 def get_incremental_uc(
     request: Request,
     index_repo: IndexRepository = Depends(get_index_repo),
@@ -47,6 +64,7 @@ def get_incremental_uc(
 ) -> IncrementalVectorizeUseCase:
     return IncrementalVectorizeUseCase(index_repo, memo_repo, request.app)
 
+@lru_cache
 def get_progress_uc(
     request: Request,
 ) -> GetVectorizeProgressUseCase:

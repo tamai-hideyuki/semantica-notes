@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
-from src.domain.memo import Memo
+from domain.memo import Memo
 
 from typing import List, Tuple
 import numpy as np

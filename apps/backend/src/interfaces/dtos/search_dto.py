@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List
-from src.domain.memo import Memo
+from domain.memo import Memo
 
 class SearchRequestDTO(BaseModel):
     query: str
