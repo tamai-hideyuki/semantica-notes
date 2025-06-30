@@ -96,7 +96,7 @@ export function SearchPage() {
                         {/* 編集ボタン */}
                         <div className={styles.actions}>
                           <Link href={`/memos/${selected.uuid}/edit`}>
-                            <button className={styles.editButton}>✏️ 編集</button>
+                            <button className={styles.editButton}>編集</button>
                           </Link>
                           <button onClick={() => setSelected(null)} className={styles.closeButton}>
                             閉じる

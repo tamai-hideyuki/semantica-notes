@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type { SearchResultDTO } from '@dtos/SearchResultDTO'
-import type { MemoCreateDTO } from '@dtos/MemoCreateDTO'
+import type { MemoCreateDTO }   from '@dtos/MemoCreateDTO'
 import type { MemoDTO }         from '@dtos/MemoDTO'
 
 // ──── BASE URL ────
@@ -70,9 +70,10 @@ export const apiClient = {
         apiClient.post<{ uuid: string; status: string }>('/memo', payload),
 
     updateMemo: (uuid: string, data: { title: string; body: string }) =>
-        client
-            .put<MemoDTO>(`/memo/${uuid}`, data)
-            .then(res => res.data),
+        client.put<MemoDTO>(`/memo/${uuid}`, data).then(res => res.data),
+
+    deleteMemo: (uuid: string) =>
+        client.delete<{ status: string }>(`/memo/${uuid}`).then(res => res.data),
 
     incrementalVectorize: () =>
         apiClient.post<{ status: string }>('/admin/incremental-vectorize'),
@@ -84,17 +85,11 @@ export const apiClient = {
         apiClient.post<{ status: string }>('/admin/rebuild'),
 }
 
-// ──── ヘルパー：カテゴリー／タグ取得 ────
-/**
- * 既存のカテゴリー一覧を取得する
- */
+// ──── カテゴリ／タグ取得ヘルパー ────
 export async function getCategories(): Promise<string[]> {
     return apiClient.get<string[]>('/categories')
 }
 
-/**
- * 既存のタグ一覧を取得する
- */
 export async function getTags(): Promise<string[]> {
     return apiClient.get<string[]>('/tags')
 }
