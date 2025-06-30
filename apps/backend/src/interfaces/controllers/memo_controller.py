@@ -107,3 +107,32 @@ async def get_tags() -> List[str]:
 async def get_categories() -> List[str]:
     repo: MemoRepository = FileSystemMemoRepository(root=MEMO_DIR)
     return await list_categories(repo)
+
+
+@router.put(
+    "/memo/{uuid}",
+    response_model=MemoDTO,
+    status_code=status.HTTP_200_OK,
+    summary="メモ更新"
+)
+async def update_memo(
+    request: Request,
+    uuid: str,
+    dto: MemoUpdateDTO,
+    repo: MemoRepository = Depends(lambda: FileSystemMemoRepository(root=Path("./data/memos")))
+) -> MemoDTO:
+    logger.debug(f"📥 {request.method} {request.url} payload={dto!r}")
+    try:
+        updated = await repo.update(uuid=uuid, title=dto.title, body=dto.body)
+        return MemoDTO.from_domain(updated)
+    except MemoNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception:
+        logger.exception("💥 メモ更新中に例外発生")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="メモの更新に失敗しました"
+        )
