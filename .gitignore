@@ -11,11 +11,14 @@ apps/backend/.index_data/
 apps/backend/docs/
 apps/backend/memos/
 apps/backend/tests/
+apps/backend/src/domain/__pycache__/
 apps/backend/dependency_analyzer/docs/docs01.md
 apps/backend/.python-version
 apps/backend/src/interfaces/dtos/__pycache__/
 apps/backend/src/__pycache__/
 apps/backend/dependency_analyzer/__pycache__/
+
+
 apps/backend/deps.dot
 # --- docker ---
 
