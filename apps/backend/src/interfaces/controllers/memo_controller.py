@@ -8,16 +8,19 @@ from interfaces.dtos.search_dto import SearchRequestDTO, SearchResultDTO
 from interfaces.dtos.create_memo_dto import CreateMemoDTO
 from interfaces.dtos.memo_dto import MemoDTO
 
-from interfaces.controllers.common import get_search_uc, get_create_uc
-from infrastructure.utils.datetime_jst import now_jst
-
+from interfaces.controllers.common import (
+    get_search_uc,
+    get_create_uc,
+    get_datetime_provider,
+)
+from interfaces.utils.datetime import DateTimeProvider
 from interfaces.repositories.memo_repo import MemoRepository
 from infrastructure.persistence.fs_memo_repo import FileSystemMemoRepository
 from usecases.list_categories import list_categories
-from usecases.list_tags       import list_tags
+from usecases.list_tags import list_tags
 
-HERE     = Path(__file__).resolve()
-BACKEND  = HERE.parents[3]
+HERE = Path(__file__).resolve()
+BACKEND = HERE.parents[3]
 MEMO_DIR = BACKEND / "memos"
 
 logger = logging.getLogger(__name__)
@@ -39,11 +42,9 @@ async def search_memos(
     uc=Depends(get_search_uc),
 ) -> List[SearchResultDTO]:
     _log_request(request, dto)
-
     query = dto.query.strip()
     if not query:
         return []
-
     try:
         domain_results = await uc.execute(query)
         return [SearchResultDTO.from_domain(m) for m in domain_results]
@@ -64,16 +65,17 @@ async def create_memo(
     request: Request,
     dto: CreateMemoDTO,
     uc=Depends(get_create_uc),
+    dt_provider: DateTimeProvider = Depends(get_datetime_provider),
 ) -> MemoDTO:
     _log_request(request, dto)
-
     try:
+        created_at = dto.created_at or dt_provider.now()
         memo = await uc.execute(
             title=dto.title,
             body=dto.body,
             tags=dto.tags,
             category=dto.category,
-            created_at=dto.created_at or now_jst(),
+            created_at=created_at,
         )
         logger.debug(f"📤 Created memo uuid={memo.uuid}")
         return MemoDTO.from_domain(memo)

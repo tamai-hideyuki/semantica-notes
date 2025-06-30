@@ -32,6 +32,9 @@ apps/backend/src/interfaces/utils/__pycache__/
 apps/backend/src/usecases/__pycache__/
 
 apps/backend/deps.dot
+
+# --- tests ---
+apps/backend/tests/__pycache__/
 # --- docker ---
 
 docker/.env
