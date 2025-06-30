@@ -2,7 +2,7 @@ import { useRouter }       from 'next/router'
 import { useEffect, useState } from 'react'
 import type { MemoDTO }    from '@dtos/MemoDTO'
 import { apiClient }       from '@lib/apiClient'
-import { EditMemo }        from '@components/EditMemo'
+import { EditMemo }        from '@presenters/EditMemo'
 
 const EditPage: React.FC = () => {
     const router = useRouter()
