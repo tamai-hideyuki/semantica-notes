@@ -4,6 +4,8 @@
 /apps/frontend/.env.local
 /apps/frontend/__tests__/
 /apps/frontend/package-lock.json
+/apps/frontend/tests/
+/apps/frontend/next-env.d.ts
 
 # --- Backend (Python/FastAPI) ---
 /apps/backend/.venv/
@@ -13,6 +15,7 @@
 /apps/backend/dependency_analyzer/docs/
 /apps/backend/.python-version
 apps/backend/deps.dot
+/apps/backend/pytest.ini
 # キャッシュ・ビルド成果物
 **/__pycache__/
 /**/*.py[cod]

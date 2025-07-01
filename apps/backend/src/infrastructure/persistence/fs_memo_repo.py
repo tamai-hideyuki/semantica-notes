@@ -78,6 +78,27 @@ class FileSystemMemoRepository(MemoRepository):
 
         return new_memo
 
+
+    async def delete(self, uuid: str) -> bool:
+        """
+        UUID に対応するメモファイルを削除する。
+        成功したら True、存在しなければ False を返す。
+        """
+        try:
+            # カテゴリ階層を考慮して正しいパスを組み立て
+            memo = await self.get_by_uuid(uuid)
+        except MemoNotFoundError:
+            return False
+
+        file_path = self._build_path(memo)
+        if not file_path.exists():
+            return False
+
+        # ブロッキング I/O は別スレッドで実行
+        await asyncio.to_thread(file_path.unlink)
+        return True
+
+
     # ────────────────── Internal ────────────────── #
     async def _with_semaphore(self, sem: asyncio.Semaphore, fn, arg):
         async with sem:

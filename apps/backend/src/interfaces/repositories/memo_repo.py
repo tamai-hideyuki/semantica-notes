@@ -17,6 +17,13 @@ class MemoRepository(ABC):
         """すべてのメモを取得する"""
         ...
 
+    @abstractmethod
+    async def delete(self, uuid: str) -> bool:
+        """
+        UUID で指定したメモを削除する。
+        削除に成功したら True、該当メモなしなら False を返す。
+        """
+        ...
 
     async def list_categories(self) -> List[str]:
         """
