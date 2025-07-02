@@ -18,6 +18,7 @@ apps/backend/deps.dot
 /apps/backend/pytest.ini
 apps/backend/Pipfile
 apps/backend/Pipfile.lock
+apps/backend/avicon.ico
 
 # キャッシュ・ビルド成果物
 **/__pycache__/
