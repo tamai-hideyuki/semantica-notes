@@ -16,6 +16,9 @@
 /apps/backend/.python-version
 apps/backend/deps.dot
 /apps/backend/pytest.ini
+apps/backend/Pipfile
+apps/backend/Pipfile.lock
+
 # キャッシュ・ビルド成果物
 **/__pycache__/
 /**/*.py[cod]
