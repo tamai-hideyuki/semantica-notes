@@ -28,7 +28,7 @@
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     padding: 1rem;
-    max-width: 950px;
+    max-width: 700px;
     width: 95%;
     margin: 0 auto 2rem;
 }
@@ -100,7 +100,7 @@
     padding: 0;
     margin: 2rem auto;
     max-width: 1000px;
-    width: 95%;
+    width: 100%;
 }
 
 /* ────────────────────────────────────────── */
@@ -115,7 +115,7 @@
     cursor: pointer;
     transition: background 0.2s;
     overflow: hidden;
-    max-height: 10rem;
+    max-height: 100rem;
 }
 .item:hover {
     background: #f9f4e8;
@@ -207,7 +207,7 @@
 .modal {
     background: #fcf6e0;
     padding: 1.5rem;
-    max-width: 1000px;
+    max-width: 1200px;
     width: 95%;
     max-height: 90vh;
     overflow-y: auto;
@@ -297,8 +297,8 @@
     background: linear-gradient(135deg, #a67c52 0%, #8b5e3c 100%);
     color: #fdf5e6;
 
-    font-size: 1.1rem;        /* 文字を少し大きめに */
-    padding: 0.15rem 0.2rem;   /* 上下／左右の余白を増やし、ふっくらと */
+    font-size: 1.1rem;          /* 文字を少し大きめに */
+    padding: 0.15rem 0.2rem;    /* 上下／左右の余白を増やし、ふっくらと */
     min-width: 3.2rem;          /* 幅が潰れすぎないよう最低幅を指定 */
 
 }
