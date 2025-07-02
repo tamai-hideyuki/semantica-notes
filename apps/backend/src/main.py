@@ -1,23 +1,32 @@
 from pathlib import Path
+import time
 import logging
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Request, Depends
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from interfaces.controllers.memo_controller import router as memo_router
-from interfaces.controllers.admin_controller import router as admin_router
-import interfaces.controllers.common as common
+
+# ルートルーター
+from interfaces.controllers import router as api_router
+# DI 用シグネチャ
+from interfaces.controllers.dependencies import (
+    get_memo_repo,
+    get_index_repo,
+    get_datetime_provider,
+)
+
 from infrastructure.persistence.fs_memo_repo import FileSystemMemoRepository
 from infrastructure.persistence.faiss_index_repo import FaissIndexRepository
 from interfaces.utils.datetime import DateTimeProvider
 
-# ロギング設定
+# ─── ロギング設定 ───────────────────────────────────────────────────────────────
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
     level=logging.DEBUG,
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.access")  # アクセスログと同じチャネルに出す
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -26,7 +35,24 @@ def create_app() -> FastAPI:
         description=settings.description,
     )
 
-    # CORS ミドルウェア
+    # ─── リクエスト／レスポンス毎に日本語ログを出力 ────────────────────────────
+    @app.middleware("http")
+    async def 日本語リクエストログ(request: Request, call_next):
+        start = time.time()
+        body = await request.body()
+        logger.debug(
+            f"➡️ 受信リクエスト: メソッド={request.method} パス={request.url.path} "
+            f"ヘッダ={dict(request.headers)} ボディ={body!r}"
+        )
+        response: Response = await call_next(request)
+        elapsed_ms = (time.time() - start) * 1000
+        logger.debug(
+            f"⬅️ レスポンス: ステータスコード={response.status_code} "
+            f"メソッド={request.method} パス={request.url.path} 所要時間={elapsed_ms:.1f}ms"
+        )
+        return response
+
+    # ─── CORS 設定 ────────────────────────────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -35,10 +61,10 @@ def create_app() -> FastAPI:
         allow_credentials=False,
     )
 
-    # 進捗初期化
+    # ─── アプリ状態 ────────────────────────────────────────────────────────────
     app.state.vectorize_progress = {"processed": 0, "total": 0}
 
-    # 依存の具象バインディング (Composition Root)
+    # ─── DI バインディング ─────────────────────────────────────────────────────
     def _provide_memo_repo() -> FileSystemMemoRepository:
         return FileSystemMemoRepository(root=Path(settings.memos_root))
 
@@ -51,21 +77,19 @@ def create_app() -> FastAPI:
         )
 
     def _provide_datetime_provider() -> DateTimeProvider:
-        # 具象実装はローカルのみでインポート
         from infrastructure.utils.datetime_jst import DateTimeJST
         return DateTimeJST()
 
-    # DI オーバーライド登録
     app.dependency_overrides = {
-        common.get_memo_repo: _provide_memo_repo,
-        common.get_index_repo: _provide_index_repo,
-        common.get_datetime_provider: _provide_datetime_provider,
+        get_memo_repo: _provide_memo_repo,
+        get_index_repo: _provide_index_repo,
+        get_datetime_provider: _provide_datetime_provider,
     }
 
-    # ルーター登録
-    app.include_router(memo_router)
-    app.include_router(admin_router)
+    # ─── ルーター登録 ────────────────────────────────────────────────────────────
+    app.include_router(api_router, prefix="/api", tags=["memo"])
 
+    # ─── 起動時ルート一覧ログ ────────────────────────────────────────────────────
     @app.on_event("startup")
     async def _log_routes() -> None:
         logger.debug("🚀 Registered routes:")
@@ -76,5 +100,4 @@ def create_app() -> FastAPI:
 
     return app
 
-# アプリケーションインスタンス
 app = create_app()

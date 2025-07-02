@@ -93,3 +93,4 @@ export async function getCategories(): Promise<string[]> {
 export async function getTags(): Promise<string[]> {
     return apiClient.get<string[]>('/tags')
 }
+
