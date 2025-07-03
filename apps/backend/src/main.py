@@ -17,9 +17,10 @@ from interfaces.controllers.dependencies import (
     get_datetime_provider,
 )
 
+from interfaces.utils.datetime import DateTimeProvider
+from infrastructure.utils.datetime_jst import DateTimeJST
 from infrastructure.persistence.fs_memo_repo import FileSystemMemoRepository
 from infrastructure.persistence.faiss_index_repo import FaissIndexRepository
-from interfaces.utils.datetime import DateTimeProvider
 
 # ─── ロギング設定 ───────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -27,6 +28,7 @@ logging.basicConfig(
     level=logging.DEBUG,
 )
 logger = logging.getLogger("uvicorn.access")  # アクセスログと同じチャネルに出す
+
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -37,17 +39,17 @@ def create_app() -> FastAPI:
 
     # ─── リクエスト／レスポンス毎に日本語ログを出力 ────────────────────────────
     @app.middleware("http")
-    async def 日本語リクエストログ(request: Request, call_next):
+    async def log_request_jp(request: Request, call_next):
         start = time.time()
         body = await request.body()
         logger.debug(
-            f"➡️ 受信リクエスト: メソッド={request.method} パス={request.url.path} "
+            f"受信リクエスト: メソッド={request.method} パス={request.url.path} "
             f"ヘッダ={dict(request.headers)} ボディ={body!r}"
         )
         response: Response = await call_next(request)
         elapsed_ms = (time.time() - start) * 1000
         logger.debug(
-            f"⬅️ レスポンス: ステータスコード={response.status_code} "
+            f"レスポンス: ステータスコード={response.status_code} "
             f"メソッド={request.method} パス={request.url.path} 所要時間={elapsed_ms:.1f}ms"
         )
         return response
@@ -77,9 +79,9 @@ def create_app() -> FastAPI:
         )
 
     def _provide_datetime_provider() -> DateTimeProvider:
-        from infrastructure.utils.datetime_jst import DateTimeJST
         return DateTimeJST()
 
+    # FastAPI の Depends でインターフェース→具象注入
     app.dependency_overrides = {
         get_memo_repo: _provide_memo_repo,
         get_index_repo: _provide_index_repo,
@@ -99,5 +101,6 @@ def create_app() -> FastAPI:
                 logger.debug(f"   {methods:10s} → {route.path}")
 
     return app
+
 
 app = create_app()

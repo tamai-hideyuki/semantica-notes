@@ -15,27 +15,28 @@ logger = logging.getLogger(__name__)
 @lru_cache()
 def get_memo_repo() -> MemoRepository:
     logger.debug("🔧 MemoRepository の実装を提供します")
-    ...  # オーバーライド想定
+    ...  # FastAPI 依存オーバーライドで具体実装をバインド
 
 @lru_cache()
 def get_index_repo(
     memo_repo: MemoRepository = Depends(get_memo_repo)
 ) -> IndexRepository:
     logger.debug("🔧 IndexRepository の実装を提供します")
-    ...  # オーバーライド
+    ...  # FastAPI 依存オーバーライドで具体実装をバインド
 
 @lru_cache()
 def get_datetime_provider() -> DateTimeProvider:
     logger.debug("🔧 DateTimeProvider の実装を提供します")
-    ...  # オーバーライド
+    ...  # FastAPI 依存オーバーライドで具体実装をバインド
 
 @lru_cache()
 def get_create_uc(
     memo_repo: MemoRepository = Depends(get_memo_repo),
-    dt_provider: DateTimeProvider = Depends(get_datetime_provider),
+    index_repo: IndexRepository = Depends(get_index_repo),
+    datetime_provider: DateTimeProvider = Depends(get_datetime_provider),
 ) -> CreateMemoUseCase:
     logger.debug("🔧 CreateMemoUseCase をインスタンス化します")
-    return CreateMemoUseCase(memo_repo, dt_provider)
+    return CreateMemoUseCase(memo_repo, index_repo, datetime_provider)
 
 @lru_cache()
 def get_search_uc(

@@ -4,8 +4,7 @@ from typing import Optional, List, TYPE_CHECKING
 
 from domain.memo import Memo
 from interfaces.repositories.memo_repo import MemoRepository
-
-from infrastructure.utils.datetime_jst import now_jst
+from interfaces.utils.datetime import DateTimeProvider
 
 if TYPE_CHECKING:
     from interfaces.repositories.index_repo import IndexRepository
@@ -19,10 +18,12 @@ class CreateMemoUseCase:
     def __init__(
         self,
         memo_repo: MemoRepository,
+        datetime_provider: DateTimeProvider,
         index_repo: Optional['IndexRepository'] = None,
     ):
         self.memo_repo = memo_repo
         self.index_repo = index_repo
+        self.datetime_provider = datetime_provider
 
     async def execute(
         self,
@@ -38,7 +39,7 @@ class CreateMemoUseCase:
             body=body,
             tags=tags,
             category=category,
-            created_at=created_at or now_jst(),
+            created_at=created_at or self.datetime_provider.now(),
         )
 
         try:
