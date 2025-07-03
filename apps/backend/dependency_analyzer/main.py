@@ -25,7 +25,7 @@ logger = logging.getLogger("dep-analyzer")
 def resolve_default_root(ctx, param, value):
     if value:
         return value
-    return Path(__file__).parent.parent
+    return Path(__file__).parent
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.argument(
@@ -46,7 +46,7 @@ def resolve_default_root(ctx, param, value):
     help="デバッグログを有効化",
 )
 def main(root: Path, dotfile: Path, debug: bool):
-    # debug モードなら全ログを DEBUG レベルに
+    # デバッグモード設定
     if debug:
         logger.setLevel(logging.DEBUG)
         for mod in (
@@ -56,19 +56,23 @@ def main(root: Path, dotfile: Path, debug: bool):
             "dependency_analyzer.formatter",
         ):
             logging.getLogger(mod).setLevel(logging.DEBUG)
-        logger.debug("Debug mode enabled")
+        logger.debug("デバッグモードを有効化しました")
 
-    logger.info(f"Analyzing dependencies under: {root}")
+    # 依存関係解析開始ログ
+    logger.info(f"解析対象ディレクトリ: {root}")
 
+    # モジュールマップ作成
     module_map = build_module_map(root)
-    logger.debug(f"Found {len(module_map)} modules")
+    logger.debug(f"検出したモジュール数: {len(module_map)} 件")
 
+    # 依存エッジ解析
     edges = analyze_dependencies(module_map)
-    logger.debug(f"Collected {len(edges)} dependency edges")
+    logger.debug(f"収集した依存エッジ数: {len(edges)} 件")
 
+    # 出力処理
     if dotfile:
         output_dot(edges, dotfile)
-        logger.info(f"Wrote graph to {dotfile}")
+        logger.info(f"DOTファイルに書き込みました: {dotfile}")
     else:
         output_text(edges)
 
@@ -76,5 +80,5 @@ if __name__ == "__main__":
     try:
         main(prog_name="dep-analyzer")
     except Exception:
-        logger.exception("Fatal error during execution")
+        logger.exception("依存関係解析中に致命的なエラーが発生しました")
         sys.exit(1)

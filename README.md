@@ -117,22 +117,12 @@ pip install -r requirements.txt
 python run.py
 ```
 
-## クリーンアーキテクチャ確認
+## 依存関係確認
 **バックエンド**
 ```bash
-python dep_checker.py . --dot deps.dot
-```
-**バックエンドも可視化したいなら**
-```text
-pip install pydeps
+cd backend
 
-pydeps src \
-  --max-bacon=2 \
-  --show-deps \
-  --noshow \
-  --show-cycles \
-  -o backend-deps.svg
-
+python3 -m dependency_analyzer.main .
 ```
 
 **フロントエンド**
