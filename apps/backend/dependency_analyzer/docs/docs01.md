@@ -1,53 +1,96 @@
+# Dependency Analyzer ツール構成とファイル説明
+
+以下は、Dependency Analyzer CLI プロジェクトのディレクトリ構成および各ファイルの役割・説明です。
+
 ```text
-dependency_analyzer/                 ← パッケージルート
-├── __init__.py                     # パッケージ認識用（空ファイル）
-├── __main__.py                     # CLI エントリポイント／引数解析・ログ設定・全体制御
-├── config.py                       # 除外ディレクトリ設定（VENDOR_DIRS）
-├── scanner.py                      # ファイル探索ロジック（find_py_files）
-├── mapper.py                       # モジュールマップ生成ロジック（build_module_map）
-├── analyzer.py                     # AST 解析＆依存抽出ロジック（analyze_dependencies）
-├── formatter.py                    # 出力ロジック（Graphviz DOT／テキスト）
-└── analyzer_utils.py               # ※もし分離しているなら「除外判定ロジック」を担うユーティリティ
+dependency_analyzer/           # パッケージルート
+├── __init__.py                # パッケージ認識用（空ファイル）
+├── main.py                    # CLI エントリポイント
+├── config.py                  # スキャン除外ディレクトリ設定
+├── mapper.py                  # Python ファイル検出＆モジュール名マッピング
+├── analyzer.py                # AST による依存関係解析ロジック
+└── formatter.py               # 出力フォーマット（DOT / テキスト）
 ```
 
-各ファイルの役割：
-
-- **__main__.py**  
-  - `click` を使った CLI 定義  
-  - `--debug` フラグでログレベル切替  
-  - `root`／`--dot` オプションの解析  
-  - 各モジュール呼び出しによるワークフロー制御  
-  - `logging.basicConfig` による全体ログフォーマット設定
-
-- **config.py**  
-  - 仮想環境や外部ライブラリディレクトリを定義する定数 `VENDOR_DIRS`
-
-- **scanner.py**  
-  - `find_py_files(root: Path) -> list[Path]`  
-  - 指定ディレクトリ以下を再帰検索し、`VENDOR_DIRS` に含まれるパスを除外して `.py` ファイルを列挙
-
-- **mapper.py**  
-  - `build_module_map(root: Path) -> dict[str, Path]`  
-  - `scanner.py` の結果を受け取り、ファイルパスをドット区切りのモジュール名にマッピング
-
-- **analyzer.py**  
-  - `analyze_dependencies(module_map) -> List[Edge]`  
-  - AST をパースし、`import`／`from` 文から取得したモジュール名と `module_map` のキーをマッチング  
-  - `Edge(src, dst)` のリストを構築
-
-- **formatter.py**  
-  - `output_dot(edges, dotfile)`：Graphviz DOT 形式でファイルへ出力  
-  - `output_text(edges)`：標準出力へ `src -> dst` テキスト出力
-
-- **analyzer_utils.py**（任意）  
-  - `is_vendor_module(module_name: str) -> bool`  
-  - `VENDOR_DIRS` を元に、解析対象外とすべきインポートを判定  
-
-――以上の構成により、各責務が明確に分離され、保守性と拡張性を担保した設計。
-
-
-## 実行方法:
-
+## 実行方法：
 ```bash
-python -m dependency_analyzer ./src --dot deps.dot --debug
+# 解析したいディレクトリに移動
+python3 -m dependency_analyzer.main .
 ```
+
+---
+
+## main.py
+
+**役割**: コマンドラインインタフェースを定義し、ユーザーからのオプションを受け取って各モジュールを呼び出すエントリポイント。
+
+* Click を利用して `root`／`--dot`／`--debug` オプションをパース
+* `build_module_map` → `analyze_dependencies` → `output_*` の処理フローを制御
+* ログレベル設定（通常／デバッグ）
+* 実行時のエラーをキャッチして日本語メッセージで通知
+
+---
+
+## config.py
+
+**役割**: スキャン時に除外すべきディレクトリ名を定義。
+
+```python
+VENDOR_DIRS = {'venv', '.venv', 'site-packages', '__pycache__'}
+```
+
+* `find_py_files` で `part in VENDOR_DIRS` をチェックし、仮想環境やキャッシュフォルダを対象外にする。
+
+---
+
+## mapper.py
+
+**役割**: 指定ディレクトリ配下の `.py` ファイルを再帰検索し、ファイルパス→モジュール名マップを作成。
+
+1. `find_py_files(root)`
+
+  * `.rglob('*.py')` で Python ファイルを一覧
+  * `VENDOR_DIRS` や `tests` ディレクトリ、`main.py`／`app.container.py` などのエントリポイントを除外
+2. `build_module_map(root)`
+
+  * 各ファイルパスから `root` 以下の相対パスを取得し `path.with_suffix('')`
+  * `src/` ディレクトリ名を除外、`__init__.py` をパッケージ名扱い
+  * 空文字列・`main`・`app.container` モジュールはスキップ
+  * `{'interfaces.controllers.memo': Path(...), ...}` のようなマップを返却
+
+---
+
+## analyzer.py
+
+**役割**: AST（抽象構文木）を使ってインポート文を解析し、内部モジュール間の依存エッジを抽出。
+
+* モジュールのトップレベル名集合を作成し、標準ライブラリ／サードパーティを排除
+* `ast.walk` で `Import`／`ImportFrom` ノードを検出
+* `record_edge` で以下のみマッチング
+
+  * **完全一致** (`import domain.memo`)
+  * **子モジュール** (`import domain.memo.submodule` → 親 `domain.memo` に依存)
+  * **親モジュール** (`import domain` → `domain.memo` などの子を検出)
+* 不正な解析失敗は `WARNING` ログとして記録
+
+---
+
+## formatter.py
+
+**役割**: 解析結果（依存エッジのリスト）をユーザー指定の形式で出力。
+
+* **DOT 形式** (`output_dot`)：
+
+  * `digraph dependencies { ... }` の Graphviz DOT ファイルを生成
+  * `logger.info`／`debug`／`error` を日本語ログ
+* **テキスト形式** (`output_text`)：
+
+  * `src -> dst` の形で標準出力に一覧
+
+---
+
+以上のモジュールを組み合わせることで、
+
+* **テストやツール、依存ライブラリは除外**し、
+* **自分たちのソースファイル同士**の依存関係のみを正確に抽出・可視化
+

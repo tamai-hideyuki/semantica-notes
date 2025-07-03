@@ -118,12 +118,8 @@ python run.py
 ```
 
 ## 依存関係確認
-**バックエンド**
-```bash
-cd backend
+- [**バックエンドはこの .md で確認**](./apps/backend/dependency_analyzer/docs/docs01.md)
 
-python3 -m dependency_analyzer.main .
-```
 
 **フロントエンド**
 

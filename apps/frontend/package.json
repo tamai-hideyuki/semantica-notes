@@ -1,5 +1,5 @@
 {
-  "name": "vectorization-memo-frontend",
+  "name": "semantica-notes-frontend",
   "version": "1.0.0",
   "scripts": {
     "dev": "next dev -p 3000",
