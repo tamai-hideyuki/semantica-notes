@@ -4,7 +4,7 @@ import type { MemoCreateDTO }   from '@dtos/MemoCreateDTO'
 import type { MemoDTO }         from '@dtos/MemoDTO'
 
 // ──── BASE URL ────
-const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
+const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? ''
 const BASE     = RAW_BASE.replace(/\/+$/g, '')
 console.debug('[API BASE]', BASE)
 
