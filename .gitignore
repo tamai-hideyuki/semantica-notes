@@ -19,6 +19,7 @@ apps/backend/deps.dot
 apps/backend/Pipfile
 apps/backend/Pipfile.lock
 apps/backend/avicon.ico
+apps/backend/print_dependencies.py
 
 # キャッシュ・ビルド成果物
 **/__pycache__/
