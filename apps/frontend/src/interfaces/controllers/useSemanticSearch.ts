@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@lib/apiClient'
 import type { SearchResultDTO } from '@dtos/SearchResultDTO'
 
-export const useSearchMemos = (query: string) =>
+export const useSemanticSearch = (query: string) =>
     useQuery<SearchResultDTO[], Error>({
         queryKey: ['search', query],
         queryFn: () => apiClient.searchMemos(query),

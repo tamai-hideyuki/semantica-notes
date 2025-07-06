@@ -1,33 +1,31 @@
+import asyncio
 from pathlib import Path
 import time
 import logging
 
-from fastapi import FastAPI, Request, Depends
-from fastapi.responses import Response
+from fastapi import FastAPI, Request, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-
-# ルートルーター
 from interfaces.controllers import router as api_router
-# DI 用シグネチャ
 from interfaces.controllers.dependencies import (
     get_memo_repo,
     get_index_repo,
     get_datetime_provider,
+    get_faiss_index_repo,
+    get_embedder_service,
 )
-
-from interfaces.utils.datetime import DateTimeProvider
-from infrastructure.utils.datetime_jst import DateTimeJST
 from infrastructure.persistence.fs_memo_repo import FileSystemMemoRepository
 from infrastructure.persistence.faiss_index_repo import FaissIndexRepository
+from infrastructure.services.embedder import EmbedderService
+from interfaces.utils.datetime import DateTimeProvider
 
-# ─── ロギング設定 ───────────────────────────────────────────────────────────────
+# ─── Logging setup ─────────────────────────────────────────────────────────
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
     level=logging.DEBUG,
 )
-logger = logging.getLogger("uvicorn.access")  # アクセスログと同じチャネルに出す
+logger = logging.getLogger("uvicorn.access")
 
 
 def create_app() -> FastAPI:
@@ -37,24 +35,7 @@ def create_app() -> FastAPI:
         description=settings.description,
     )
 
-    # ─── リクエスト／レスポンス毎に日本語ログを出力 ────────────────────────────
-    @app.middleware("http")
-    async def log_request_jp(request: Request, call_next):
-        start = time.time()
-        body = await request.body()
-        logger.debug(
-            f"受信リクエスト: メソッド={request.method} パス={request.url.path} "
-            f"ヘッダ={dict(request.headers)} ボディ={body!r}"
-        )
-        response: Response = await call_next(request)
-        elapsed_ms = (time.time() - start) * 1000
-        logger.debug(
-            f"レスポンス: ステータスコード={response.status_code} "
-            f"メソッド={request.method} パス={request.url.path} 所要時間={elapsed_ms:.1f}ms"
-        )
-        return response
-
-    # ─── CORS 設定 ────────────────────────────────────────────────────────────
+    # ─── Middleware ─────────────────────────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -63,42 +44,80 @@ def create_app() -> FastAPI:
         allow_credentials=False,
     )
 
-    # ─── アプリ状態 ────────────────────────────────────────────────────────────
-    app.state.vectorize_progress = {"processed": 0, "total": 0}
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        start = time.time()
+        body = await request.body()
+        logger.debug(
+            "Request: method=%s path=%s headers=%s body=%r",
+            request.method,
+            request.url.path,
+            dict(request.headers),
+            body,
+        )
+        response: Response = await call_next(request)
+        elapsed = (time.time() - start) * 1000
+        logger.debug(
+            "Response: status=%d method=%s path=%s elapsed=%.1fms",
+            response.status_code,
+            request.method,
+            request.url.path,
+            elapsed,
+        )
+        return response
 
-    # ─── DI バインディング ─────────────────────────────────────────────────────
-    def _provide_memo_repo() -> FileSystemMemoRepository:
-        return FileSystemMemoRepository(root=Path(settings.memos_root))
+    # ─── Dependency Providers ─────────────────────────────────────────────────
+    def provide_memo_repo() -> FileSystemMemoRepository:
+        return FileSystemMemoRepository(Path(settings.memos_root))
 
-    def _provide_index_repo(
-        memo_repo: FileSystemMemoRepository = Depends(_provide_memo_repo),
+    def provide_index_repo(
+        memo_repo: FileSystemMemoRepository = Depends(provide_memo_repo),
     ) -> FaissIndexRepository:
         return FaissIndexRepository(
             index_dir=Path(settings.index_data_root),
             memo_repo=memo_repo,
+            dim=settings.embedding_dim,
         )
 
-    def _provide_datetime_provider() -> DateTimeProvider:
-        return DateTimeJST()
+    def provide_datetime_provider() -> DateTimeProvider:
+        return get_datetime_provider()
 
-    # FastAPI の Depends でインターフェース→具象注入
+    def provide_embedder() -> EmbedderService:
+        return get_embedder_service()
+
     app.dependency_overrides = {
-        get_memo_repo: _provide_memo_repo,
-        get_index_repo: _provide_index_repo,
-        get_datetime_provider: _provide_datetime_provider,
+        get_memo_repo: provide_memo_repo,
+        get_index_repo: provide_index_repo,
+        get_datetime_provider: provide_datetime_provider,
+        get_faiss_index_repo: provide_index_repo,
+        get_embedder_service: provide_embedder,
     }
 
-    # ─── ルーター登録 ────────────────────────────────────────────────────────────
-    app.include_router(api_router, prefix="/api", tags=["memo"])
-
-    # ─── 起動時ルート一覧ログ ────────────────────────────────────────────────────
+    # ─── Startup Events ───────────────────────────────────────────────────────
     @app.on_event("startup")
-    async def _log_routes() -> None:
-        logger.debug("🚀 Registered routes:")
-        for route in app.routes:
-            if hasattr(route, "methods"):
-                methods = ",".join(route.methods)
-                logger.debug(f"   {methods:10s} → {route.path}")
+    async def initialize_faiss():
+        """
+        起動時にFAISSインデックスの初期化を行う。
+        初回のみ全メモのベクトル化とインデックス構築を実施し、以降はスキップ。
+        """
+        memo_repo = provide_memo_repo()
+        faiss_repo = provide_index_repo(memo_repo)
+        embedder = provide_embedder()
+
+        if not faiss_repo.id_to_uuid:
+            all_memos = await memo_repo.list_all()
+            for memo in all_memos:
+                if getattr(memo, "embedding", None) is None:
+                    vec = embedder.encode(memo.body or memo.title or "")
+                    memo.embedding = vec
+                    await asyncio.to_thread(memo_repo._save_embedding, memo)
+            faiss_repo.rebuild(all_memos)
+            logger.debug("FAISS initial rebuild done: %d memos indexed", len(all_memos))
+        else:
+            logger.debug("FAISS initialization skipped: %d entries already indexed", len(faiss_repo.id_to_uuid))
+
+    # ─── Routers ─────────────────────────────────────────────────────────────
+    app.include_router(api_router, prefix="/api")
 
     return app
 
