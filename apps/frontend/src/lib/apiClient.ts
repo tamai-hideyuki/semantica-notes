@@ -1,11 +1,11 @@
 import axios from 'axios'
 import type { SearchResultDTO } from '@dtos/SearchResultDTO'
-import type { MemoCreateDTO }   from '@dtos/MemoCreateDTO'
-import type { MemoDTO }         from '@dtos/MemoDTO'
+import type { MemoCreateDTO } from '@dtos/MemoCreateDTO'
+import type { MemoDTO } from '@dtos/MemoDTO'
 
 // ──── BASE URL ────
 const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? ''
-const BASE     = RAW_BASE.replace(/\/+$/g, '')
+const BASE = RAW_BASE.replace(/\/+$/g, '')
 console.debug('[API BASE]', BASE)
 
 // ──── Axios Instance ────
@@ -22,7 +22,7 @@ client.interceptors.request.use(
         const fullUrl = `${config.baseURL ?? ''}${config.url}`
         console.groupCollapsed('[API REQUEST]', formatMethod(config.method), fullUrl)
         console.debug('Config:', config)
-        if (config.data)   console.debug('Payload:', config.data)
+        if (config.data) console.debug('Payload:', config.data)
         if (config.params) console.debug('Params:', config.params)
         console.groupEnd()
         return config
@@ -57,24 +57,34 @@ client.interceptors.response.use(
 
 // ──── API Client ────
 export const apiClient = {
+    // 汎用 POST／GET
     post: async <T>(path: string, body?: unknown): Promise<T> =>
         client.post<T>(path, body).then(res => res.data),
 
     get: async <T>(path: string): Promise<T> =>
         client.get<T>(path).then(res => res.data),
 
+    // 検索エンドポイント
     searchMemos: (query: string) =>
         apiClient.post<SearchResultDTO[]>('/search', { query }),
 
+    searchSemanticMemos: (query: string) =>
+        apiClient.post<SearchResultDTO[]>('/search/semantic', { query }),
+
+    searchHybridMemos: (query: string) =>
+        apiClient.post<SearchResultDTO[]>('/search/hybrid', { query }),
+
+    // メモ操作
     createMemo: (payload: MemoCreateDTO) =>
         apiClient.post<{ uuid: string; status: string }>('/memo', payload),
 
     updateMemo: (uuid: string, data: { title: string; body: string }) =>
-        client.put<MemoDTO>(`/memo/${uuid}`, data).then(res => res.data),
+        apiClient.post<MemoDTO>(`/memo/${uuid}`, data),
 
     deleteMemo: (uuid: string) =>
-        client.delete<{ status: string }>(`/memo/${uuid}`).then(res => res.data),
+        apiClient.post<{ status: string }>(`/memo/${uuid}`, {}),
 
+    // 管理操作
     incrementalVectorize: () =>
         apiClient.post<{ status: string }>('/admin/incremental-vectorize'),
 
@@ -93,4 +103,3 @@ export async function getCategories(): Promise<string[]> {
 export async function getTags(): Promise<string[]> {
     return apiClient.get<string[]>('/tags')
 }
-

@@ -1,64 +1,80 @@
-from typing import List
+from typing import List, Tuple
 from fastapi import FastAPI
 import numpy as np
 from anyio import to_thread
 
 from domain.memo import Memo
 from interfaces.repositories.memo_repo import MemoRepository
-from interfaces.repositories.index_repo import IndexRepository
+from infrastructure.persistence.faiss_chunk_repo import FaissChunkRepository
+from infrastructure.services.embedder import EmbedderService
 
 class IncrementalVectorizeUseCase:
     def __init__(
         self,
-        index_repo: IndexRepository,
+        chunk_repo: FaissChunkRepository,
         memo_repo: MemoRepository,
         app: FastAPI,
-    ):
-        self._index_repo = index_repo
+        embedder: EmbedderService = EmbedderService(),
+    ) -> None:
+        self._chunk_repo = chunk_repo
         self._memo_repo  = memo_repo
         self._app        = app
+        self._embedder   = embedder
 
         # 進捗 state の初期化
-        if not hasattr(app.state, "vectorize_progress"):
-            app.state.vectorize_progress = {"processed": 0, "total": 0}
+        self._app.state.vectorize_progress = {"processed": 0, "total": 0}
 
     async def execute(self) -> None:
-        print("🧠 【UseCase】execute START")
+        logger = getattr(self._app, "logger", None)
+        if logger:
+            logger.info("IncrementalVectorizeUseCase: START")
+        else:
+            print("UseCase START")
 
-        # 全メモ取得／未ベクトル化抽出
-        all_memos    = await self._memo_repo.list_all()
-        to_vectorize = await self._index_repo.filter_new(all_memos)
+        # 1) 全メモ取得
+        all_memos: List[Memo] = await self._memo_repo.list_all() or []
+        # 2) 未ベクトル化分を抽出
+        to_vectorize: List[Memo] = await self._chunk_repo.filter_new(all_memos) or []
+
         total = len(to_vectorize)
+        # 進捗情報をまとめて更新
         self._app.state.vectorize_progress.update(total=total, processed=0)
-        print(f"📄 全メモ数={len(all_memos)}, 🆕 対象={total}")
 
         if total == 0:
-            print("✅ 新規メモなし")
+            if logger:
+                logger.info("No new memos to vectorize.")
+            else:
+                print("新規メモなし")
             return
 
-        # モデルロード＋エンコードをスレッド実行 (プロセス化しない)
-        def _encode(texts: List[str]):
-            from sentence_transformers import SentenceTransformer
-            model = SentenceTransformer("sentence-transformers/LaBSE", device="cpu")
-            print("🧩 モデルロード完了")
-            return model.encode(
-                texts,
-                batch_size=32,
-                convert_to_numpy=True,
-                show_progress_bar=False,
+        # 3) 各メモをチャンク→エンコード→追加
+        for idx, memo in enumerate(to_vectorize, start=1):
+            # encode_chunks は CPU バウンドの可能性があるため thread で実行
+            chunked: List[Tuple[str, np.ndarray]] = await to_thread.run_sync(
+                lambda text: self._embedder.encode_chunks(text),
+                memo.body or memo.title or ""
             )
 
-        texts = [m.body or m.title or "" for m in to_vectorize]
-        embeddings = await to_thread.run_sync(_encode, texts)
+            # (chunk_id, vector) ペアをまとめて生成
+            items: List[Tuple[str, np.ndarray]] = [
+                (f"{memo.uuid}_{i}", vec)
+                for i, (_, vec) in enumerate(chunked)
+            ]
 
-        # エンコード結果をMemoに貼り付け
-        for memo, emb in zip(to_vectorize, embeddings):
-            memo.embedding = np.asarray(emb, dtype="float32")
+            # バッチ追加（実装側で一括追加に対応）
+            self._chunk_repo.add_chunks_batch(items)
 
-        # FAISS に一括追加＆保存
-        self._index_repo.incremental_update(to_vectorize)
-        print("💾 FAISS への追加完了")
+            # 進捗更新
+            self._app.state.vectorize_progress["processed"] = idx
 
-        # 完了マーク
-        self._app.state.vectorize_progress["processed"] = total
-        print("✅ ベクトル化ユースケース完了")
+            if logger:
+                logger.info(f"Vectorized memo {memo.uuid} ({idx}/{total})")
+            else:
+                print(f"ベクトル化完了: {memo.uuid} ({idx}/{total})")
+
+        if logger:
+            logger.info("All chunks added to FAISS index.")
+            logger.info("IncrementalVectorizeUseCase: COMPLETE")
+        else:
+            print("FAISS への追加完了")
+            print("UseCase COMPLETE")

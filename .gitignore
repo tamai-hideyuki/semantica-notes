@@ -20,6 +20,7 @@ apps/backend/Pipfile
 apps/backend/Pipfile.lock
 apps/backend/avicon.ico
 apps/backend/print_dependencies.py
+apps/backend/.env
 
 # キャッシュ・ビルド成果物
 **/__pycache__/

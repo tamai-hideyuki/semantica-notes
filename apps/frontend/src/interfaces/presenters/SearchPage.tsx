@@ -1,6 +1,7 @@
-import React, { useState, ChangeEvent, FormEvent } from 'react'
-import { useSearchMemos } from '@controllers/useSearchMemos'
-import useDebounce from '../../hooks/useDebounce'
+import React, { useState, ChangeEvent, FormEvent, JSX } from 'react'
+import { useSemanticSearch } from '@hooks/useSemanticSearch'
+import { useHybridSearch } from '@hooks/useHybridSearch'
+import useDebounce from '@hooks/useDebounce'
 import type { SearchResultDTO } from '@dtos/SearchResultDTO'
 import styles from '../../styles/SearchPage.module.css'
 import Link from 'next/link'
@@ -10,12 +11,20 @@ import { formatDate } from '@utils/formatDate'
 Modal.setAppElement('#__next')
 const ITEMS_PER_PAGE = 10
 
-export function SearchPage() {
-    const [query, setQuery] = useState('')
+type SearchMode = 'semantic' | 'hybrid'
+
+export function SearchPage(): JSX.Element {
+    const [query, setQuery] = useState<string>('')
+    const [mode, setMode] = useState<SearchMode>('semantic')
     const [selected, setSelected] = useState<SearchResultDTO | null>(null)
-    const [page, setPage] = useState(1)
-    const debouncedQuery = useDebounce(query, 500)
-    const { data: results = [], isLoading, isError, error, refetch } = useSearchMemos(debouncedQuery)
+    const [page, setPage] = useState<number>(1)
+
+    const debouncedQuery = useDebounce<string>(query, 500)
+
+    const { data: results = [], isLoading, isError, error, refetch } =
+        mode === 'semantic'
+            ? useSemanticSearch(debouncedQuery)
+            : useHybridSearch(debouncedQuery)
 
     const sortedResults = React.useMemo(() => {
         if (!debouncedQuery) {
@@ -41,6 +50,29 @@ export function SearchPage() {
             <h1 className={styles.heading}>メモ検索</h1>
 
             <div className={styles.searchCard}>
+                <div className={styles.modeToggle}>
+                    <label>
+                        <input
+                            type="radio"
+                            name="mode"
+                            value="semantic"
+                            checked={mode === 'semantic'}
+                            onChange={() => setMode('semantic')}
+                        />
+                        セマンティック
+                    </label>
+                    <label>
+                        <input
+                            type="radio"
+                            name="mode"
+                            value="hybrid"
+                            checked={mode === 'hybrid'}
+                            onChange={() => setMode('hybrid')}
+                        />
+                        ハイブリッド
+                    </label>
+                </div>
+
                 <form onSubmit={handleSearch} className={styles.form}>
                     <input
                         type="text"
@@ -62,8 +94,12 @@ export function SearchPage() {
                     {pagedResults.map((r) => (
                         <li key={r.uuid} className={styles.item} onClick={() => setSelected(r)}>
                             <h2 className={styles.title}>{r.title}</h2>
-                            <pre className={styles.preview}>{r.body.slice(0, 200)}{r.body.length > 200 ? '…' : ''}</pre>
-                            <small className={styles.meta}>{formatDate(r.created_at)} ・ {r.category} / {r.tags.join(', ')}</small>
+                            <pre className={styles.preview}>
+                {r.body.slice(0, 200)}{r.body.length > 200 ? '…' : ''}
+              </pre>
+                            <small className={styles.meta}>
+                                {formatDate(r.created_at)} ・ {r.category} / {r.tags.join(', ')}
+                            </small>
                         </li>
                     ))}
                 </ul>
@@ -88,22 +124,20 @@ export function SearchPage() {
                 className={styles.modal}
                 overlayClassName={styles.overlay}
             >
-            {selected && (
-                <div className={styles.detailCard}>
+                {selected && (
+                    <div className={styles.detailCard}>
                         <h2 className={styles.detailTitle}>{selected.title}</h2>
                         <pre className={styles.fullBody}>{selected.body}</pre>
-
-                        {/* 編集ボタン */}
                         <div className={styles.actions}>
-                          <Link href={`/memos/${selected.uuid}/edit`}>
-                            <button className={styles.editButton}>編集</button>
-                          </Link>
-                          <button onClick={() => setSelected(null)} className={styles.closeButton}>
-                            閉じる
-                          </button>
+                            <Link href={`/memos/${selected.uuid}/edit`}>
+                                <button className={styles.editButton}>編集</button>
+                            </Link>
+                            <button onClick={() => setSelected(null)} className={styles.closeButton}>
+                                閉じる
+                            </button>
                         </div>
                     </div>
-            )}
+                )}
             </Modal>
 
             <Link href="/" className={styles.backLink}>⏎ 戻る</Link>
