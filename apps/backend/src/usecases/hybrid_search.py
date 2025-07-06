@@ -20,8 +20,8 @@ class HybridSearchUseCase:
         chunk_repo: IndexRepository,
         elastic_repo: SearchRepository,
         embedder: EmbedderService,
-        semantic_weight: float = 0.6,
-        elastic_weight: float = 0.4,
+        semantic_weight: float = 0.2,
+        elastic_weight: float = 0.8,
     ) -> None:
         self.chunk_repo = chunk_repo
         self.elastic_repo = elastic_repo
