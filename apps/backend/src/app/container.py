@@ -1,52 +1,160 @@
+import logging
+from functools import lru_cache
 from pathlib import Path
-from fastapi import Depends
+
+from fastapi import Depends, Request
 
 from config import settings
-from interfaces.controllers.dependencies import (
-    get_memo_repo as abstract_memo_repo,
-    get_index_repo as abstract_index_repo,
-    get_datetime_provider as abstract_datetime_provider,
-)
+from domain.memo import Memo
+from interfaces.repositories.index_repo import IndexRepository
+from interfaces.repositories.memo_repo import MemoRepository, MemoNotFoundError
+from interfaces.repositories.search_repo import SearchRepository
 from infrastructure.persistence.fs_memo_repo import FileSystemMemoRepository
+from infrastructure.persistence.faiss_chunk_repo import FaissChunkRepository
 from infrastructure.persistence.faiss_index_repo import FaissIndexRepository
-
-from interfaces.utils.datetime import DateTimeProvider
+from infrastructure.persistence.elasticsearch_repo import ElasticsearchMemoRepository
+from infrastructure.services.embedder import EmbedderService
 from infrastructure.utils.datetime_jst import DateTimeJST
+from interfaces.utils.datetime import DateTimeProvider
+from usecases.create_memo import CreateMemoUseCase
+from usecases.search_memos import SearchMemosUseCase
+from usecases.hybrid_search import HybridSearchUseCase
+from usecases.incremental_vectorize import IncrementalVectorizeUseCase
+from usecases.get_progress import GetVectorizeProgressUseCase
+
+logger = logging.getLogger(__name__)
 
 
-def provide_memo_repo() -> FileSystemMemoRepository:
-    """
-    FileSystemMemoRepository の具象実装を提供
-    """
-    return FileSystemMemoRepository(root=Path(settings.memos_root))
+@lru_cache()
+def get_memo_repo() -> MemoRepository:
+    return FileSystemMemoRepository(Path(settings.memos_root))
 
 
-def provide_index_repo(
-    memo_repo: FileSystemMemoRepository = Depends(provide_memo_repo),
-) -> FaissIndexRepository:
-    """
-    FaissIndexRepository の具象実装を提供
-    """
-    return FaissIndexRepository(
-        index_dir=Path(settings.index_data_root),
-        memo_repo=memo_repo,
+@lru_cache()
+def get_faiss_chunk_repo() -> FaissChunkRepository:
+    index_dir = Path(settings.index_data_root)
+    logger.debug(f"🔧 FaissChunkRepository をインスタンス化します (index_dir={index_dir})")
+    return FaissChunkRepository(
+        index_dir=index_dir,
+        dimension=settings.embedding_dim,
     )
 
 
-def provide_datetime_provider() -> DateTimeProvider:
-    """
-    DateTimeProvider の具象実装を提供
-    """
+@lru_cache()
+def get_faiss_index_repo() -> FaissIndexRepository:
+    index_dir = Path(settings.index_data_root)
+    logger.debug(f"🔧 FaissIndexRepository をインスタンス化します (index_dir={index_dir})")
+    return FaissIndexRepository(
+        index_dir=index_dir,
+        memo_repo=get_memo_repo(),
+    )
+
+
+@lru_cache()
+def get_index_repo(
+    chunk_repo: FaissChunkRepository = Depends(get_faiss_chunk_repo),
+) -> IndexRepository:
+    return chunk_repo
+
+
+@lru_cache()
+def get_elastic_repo() -> ElasticsearchMemoRepository:
+    raw = settings.elasticsearch_hosts
+    if isinstance(raw, str) and raw.startswith("["):
+        hosts_list = __import__("json").loads(raw)
+    elif isinstance(raw, str):
+        hosts_list = [h.strip() for h in raw.split(",") if h.strip()]
+    else:
+        hosts_list = raw
+
+    return ElasticsearchMemoRepository(
+        hosts=hosts_list,
+        index_name=settings.elasticsearch_index,
+    )
+
+
+@lru_cache()
+def get_embedder_service() -> EmbedderService:
+    return EmbedderService(model_name=settings.model_name)
+
+
+@lru_cache()
+def get_datetime_provider() -> DateTimeProvider:
+    logger.debug("🔧 DateTimeProvider をインスタンス化します")
     return DateTimeJST()
 
 
-def dependency_overrides() -> dict:
-    """
-    FastAPI の dependency_overrides 用マッピングを返す
-    """
-    return {
-        abstract_memo_repo: provide_memo_repo,
-        abstract_index_repo: provide_index_repo,
-        abstract_datetime_provider: provide_datetime_provider,
-    }
+@lru_cache()
+def get_create_uc(
+    memo_repo: MemoRepository = Depends(get_memo_repo),
+    datetime_provider: DateTimeProvider = Depends(get_datetime_provider),
+    faiss_index_repo: FaissIndexRepository = Depends(get_faiss_index_repo),
+    faiss_chunk_repo: FaissChunkRepository = Depends(get_faiss_chunk_repo),
+    elastic_repo: ElasticsearchMemoRepository = Depends(get_elastic_repo),
+) -> CreateMemoUseCase:
+    logger.debug("🔧 CreateMemoUseCase をインスタンス化します")
 
+    class CompositeIndexRepo:
+        async def add_to_index(self, uuid: str, memo: Memo) -> None:
+            faiss_index_repo.incremental_update([memo])
+            chunks = EmbedderService(model_name=settings.model_name).encode_chunks(
+                memo.body or memo.title or ""
+            )
+            items = [(f"{memo.uuid}_{i}", vec) for i, (_, vec) in enumerate(chunks)]
+            faiss_chunk_repo.add_chunks_batch(items)
+            await elastic_repo.index(memo)
+
+    return CreateMemoUseCase(
+        memo_repo,
+        datetime_provider,
+        CompositeIndexRepo(),
+    )
+
+
+@lru_cache()
+def get_search_uc(
+    faiss_repo: FaissIndexRepository = Depends(get_faiss_index_repo),
+    memo_repo: MemoRepository = Depends(get_memo_repo),
+) -> SearchMemosUseCase:
+    logger.debug("🔧 SearchMemosUseCase をインスタンス化します")
+    return SearchMemosUseCase(index_repo=faiss_repo, memo_repo=memo_repo)
+
+
+@lru_cache()
+def get_hybrid_uc(
+    chunk_repo: IndexRepository = Depends(get_index_repo),
+    elastic_repo: SearchRepository = Depends(get_elastic_repo),
+    embedder: EmbedderService = Depends(get_embedder_service),
+) -> HybridSearchUseCase:
+    logger.debug("🔧 HybridSearchUseCase をインスタンス化します")
+    return HybridSearchUseCase(
+        chunk_repo=chunk_repo,
+        elastic_repo=elastic_repo,
+        embedder=embedder,
+        semantic_weight=settings.hybrid_semantic_weight,
+        elastic_weight=settings.hybrid_elastic_weight,
+    )
+
+
+@lru_cache()
+def get_incremental_uc(
+    request: Request,
+    memo_repo: MemoRepository = Depends(get_memo_repo),
+    chunk_repo: FaissChunkRepository = Depends(get_faiss_chunk_repo),
+    embedder: EmbedderService = Depends(get_embedder_service),
+) -> IncrementalVectorizeUseCase:
+    logger.debug("🔧 IncrementalVectorizeUseCase をインスタンス化します")
+    return IncrementalVectorizeUseCase(
+        chunk_repo,
+        memo_repo,
+        request.app,
+        embedder,
+    )
+
+
+@lru_cache()
+def get_progress_uc(
+    request: Request,
+) -> GetVectorizeProgressUseCase:
+    logger.debug("🔧 GetVectorizeProgressUseCase をインスタンス化します")
+    return GetVectorizeProgressUseCase(request.app)
