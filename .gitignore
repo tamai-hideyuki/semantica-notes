@@ -15,13 +15,8 @@
 /apps/backend/dependency_analyzer/docs/
 /apps/backend/.python-version
 apps/backend/deps.dot
-/apps/backend/pytest.ini
-apps/backend/Pipfile
-apps/backend/Pipfile.lock
-apps/backend/avicon.ico
-apps/backend/print_dependencies.py
 apps/backend/.env
-
+apps/backend/src/app/__init__.py
 # キャッシュ・ビルド成果物
 **/__pycache__/
 /**/*.py[cod]
@@ -33,7 +28,7 @@ apps/backend/.env
 /*.swo
 
 # Docker 環境変数
-/docker/.env
+#/docker/.env
 
 # Node.js 全体
 /node_modules/
