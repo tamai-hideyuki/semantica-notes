@@ -30,7 +30,7 @@ class SearchMemosUseCase:
         q_vec = self._embed(query)
 
         # 2. 類似検索
-        uuids, dists = self.index_repo.search(q_vec, top_k)
+        uuids, dists = await self.index_repo.search(q_vec, top_k)
         dists = np.asarray(dists).flatten()
         uuids = [u for u in uuids if u]
         if not uuids:

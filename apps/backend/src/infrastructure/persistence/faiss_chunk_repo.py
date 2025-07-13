@@ -1,7 +1,9 @@
 import json
 import logging
+import asyncio
 from pathlib import Path
-from typing import List, Tuple, Optional, Set
+from typing import List, Tuple, Optional, Set, Union
+from concurrent.futures import ThreadPoolExecutor
 
 import faiss
 import numpy as np
@@ -9,125 +11,137 @@ from domain.memo import Memo
 
 logger = logging.getLogger(__name__)
 
-class FaissChunkRepository:
+class AsyncFaissChunkRepository:
     """
-    チャンク単位の FAISS インデックス管理リポジトリ
-    - チャンクID の重複を防止
-    - ID マッピングはセットで管理して永続化
+    チャンク単位の FAISS インデックス管理リポジトリ（非同期永続化対応）
+    - チャンクIDリストでインデックス⇔ID逆引きをO(1)に
+    - ThreadPoolExecutorでディスクI/Oをオフロード
+    - 大規模向けIVF Flat IPインデックスに切り替え可能
     """
-
-    def __init__(self, index_dir: Path, dimension: int):
-        self.index_dir = index_dir
-        self.dimension = dimension
-        # インデックスと ID セットをロード
-        self.index = self._load_or_create_index()
-        self._chunk_id_set = set(self._load_chunk_ids())
-
-    def _load_or_create_index(self) -> faiss.IndexFlatIP:
+    def __init__(
+        self,
+        index_dir: Union[str, Path],
+        dimension: int,
+        use_ivf: bool = False,
+        nlist: int = 128,
+        io_workers: int = 2,
+    ):
+        self.index_dir = Path(index_dir)
         self.index_dir.mkdir(parents=True, exist_ok=True)
-        index_path = self.index_dir / "chunk.index"
-        if index_path.exists():
-            idx = faiss.read_index(str(index_path))
-            logger.debug("Loaded FAISS chunk index: %s (ntotal=%d)", index_path, idx.ntotal)
-            return idx
-        idx = faiss.IndexFlatIP(self.dimension)
-        logger.debug("Created new FAISS IndexFlatIP(dim=%d)", self.dimension)
+
+        self.dimension = dimension
+        self.use_ivf = use_ivf
+        self.nlist = nlist
+
+        # 永続化用スレッドプール
+        self._io_executor = ThreadPoolExecutor(max_workers=io_workers)
+        # チャンクID の順序付きマッピング
+        self._chunk_ids: List[str] = []
+
+        # FAISS インデックスをロード or 作成
+        self.index = self._load_or_create_index()
+
+        # チャンクIDリストをロード
+        self._load_chunk_ids()
+
+    def _load_or_create_index(self) -> faiss.Index:
+        idx_path = self.index_dir / "chunk.index"
+        if idx_path.exists():
+            idx = faiss.read_index(str(idx_path))
+            logger.debug("Loaded FAISS index: %s (ntotal=%d)", idx_path, idx.ntotal)
+        else:
+            if self.use_ivf:
+                quantizer = faiss.IndexFlatIP(self.dimension)
+                idx = faiss.IndexIVFFlat(quantizer, self.dimension, self.nlist, faiss.METRIC_INNER_PRODUCT)
+                idx.train(np.zeros((1, self.dimension), dtype="float32"))  # train 必須
+                logger.debug("Created IVF FlatIP index (dim=%d, nlist=%d)", self.dimension, self.nlist)
+            else:
+                idx = faiss.IndexFlatIP(self.dimension)
+                logger.debug("Created FlatIP index (dim=%d)", self.dimension)
         return idx
 
-    def _load_chunk_ids(self) -> List[str]:
-        ids_path = self.index_dir / "chunk_ids.json"
-        if ids_path.exists():
+    def _load_chunk_ids(self) -> None:
+        path = self.index_dir / "chunk_ids.json"
+        if path.exists():
             try:
-                with open(ids_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                raw = path.read_text(encoding="utf-8")
+                self._chunk_ids = json.loads(raw)
+                logger.debug("Loaded %d chunk IDs", len(self._chunk_ids))
             except Exception as e:
                 logger.error("Failed to load chunk_ids.json: %s", e)
-        return []
+                self._chunk_ids = []
+        else:
+            self._chunk_ids = []
 
-    def _save_chunk_ids(self) -> None:
-        ids_path = self.index_dir / "chunk_ids.json"
+    async def _persist(self) -> None:
+        """FAISSインデックスとチャンクIDリストを非同期で永続化"""
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(self._io_executor, self._sync_persist)
+
+    def _sync_persist(self) -> None:
         try:
-            with open(ids_path, "w", encoding="utf-8") as f:
-                json.dump(list(self._chunk_id_set), f, ensure_ascii=False, indent=2)
-            logger.debug("Persisted %d chunk IDs", len(self._chunk_id_set))
+            # インデックス書き出し
+            faiss.write_index(self.index, str(self.index_dir / "chunk.index"))
+            # チャンクIDリスト書き出し
+            (self.index_dir / "chunk_ids.json").write_text(
+                json.dumps(self._chunk_ids, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            logger.debug("Persisted index and %d chunk IDs", len(self._chunk_ids))
         except Exception as e:
-            logger.error("Failed to save chunk_ids.json: %s", e)
+            logger.error("Persistence error: %s", e)
 
-    def _persist_index(self) -> None:
-        index_path = self.index_dir / "chunk.index"
-        try:
-            faiss.write_index(self.index, str(index_path))
-            logger.debug("Persisted FAISS index to %s", index_path)
-        except Exception as e:
-            logger.error("Failed to write FAISS index: %s", e)
-
-    def save(self) -> None:
+    async def add_chunks_batch(self, items: List[Tuple[str, np.ndarray]]) -> None:
         """
-        FAISS インデックスと ID マッピングを永続化
+        バッチ単位でチャンクを追加し、非同期で一度だけ永続化
         """
-        self._persist_index()
-        self._save_chunk_ids()
-
-    def add_chunks_batch(
-        self,
-        items: List[Tuple[str, np.ndarray]]
-    ) -> None:
-        """
-        バッチ単位でチャンクを追加し、一度だけ永続化
-        """
-        # 重複排除して新規アイテムだけ処理
-        new_items = [(cid, vec) for cid, vec in items if cid not in self._chunk_id_set]
-        if not new_items:
+        # 新規チャンクのみフィルタ
+        new = [(cid, vec) for cid, vec in items if cid not in self._chunk_ids]
+        if not new:
             logger.debug("No new chunks to add")
             return
-        vectors = np.stack([vec for _, vec in new_items])
-        self.index.add(vectors)
-        for chunk_id, _ in new_items:
-            self._chunk_id_set.add(chunk_id)
-        # 一括で保存
-        self.save()
 
-    def add_chunks(
-        self,
-        items: List[Tuple[str, np.ndarray]]
-    ) -> None:
-        """
-        items: List of (chunk_id, vector)
-        単体追加呼び出し時もバッチ方式を利用
-        """
-        self.add_chunks_batch(items)
+        vecs = np.stack([vec for _, vec in new]).astype("float32")
+        self.index.add(vecs)
 
-    def search(self, query_vec: np.ndarray, top_k: int) -> List[Tuple[str, float]]:
-        """
-        return List of (chunk_id, score)
-        """
-        total = int(self.index.ntotal)
-        if total <= 0:
+        # ID リストを伸張
+        self._chunk_ids.extend([cid for cid, _ in new])
+
+        # 非同期永続化
+        await self._persist()
+
+    async def add_chunks(self, items: List[Tuple[str, np.ndarray]]) -> None:
+        """単体追加もバッチ関数に委譲"""
+        await self.add_chunks_batch(items)
+
+    def _sync_search(self, query: np.ndarray, top_k: int) -> List[Tuple[str, float]]:
+        total = self.index.ntotal
+        if total == 0:
             return []
-        top_k = min(top_k, total)
-        D, I = self.index.search(query_vec.reshape(1, -1), top_k)
+
+        k = min(top_k, total)
+        # IVF 時は nprobe を調整可能
+        if self.use_ivf and isinstance(self.index, faiss.IndexIVFFlat):
+            self.index.nprobe = min(10, self.nlist // 10)
+
+        D, I = self.index.search(query.reshape(1, -1).astype("float32"), k)
         results: List[Tuple[str, float]] = []
         for idx, score in zip(I[0], D[0]):
-            if idx < 0:
+            if idx < 0 or idx >= len(self._chunk_ids):
                 continue
-            cid = self._get_chunk_id(idx)
-            if cid:
-                results.append((cid, float(score)))
+            results.append((self._chunk_ids[idx], float(score)))
         return results
 
-    def _get_chunk_id(self, index: int) -> Optional[str]:
-        """
-        インデックス番号からチャンクIDを逆引き
-        """
-        try:
-            return list(self._chunk_id_set)[index]
-        except Exception:
-            logger.warning("Invalid chunk index: %d", index)
-            return None
+    async def search(self, query_vec: np.ndarray, top_k: int) -> List[Tuple[str, float]]:
+        """非同期ラッパー"""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._sync_search, query_vec, top_k)
 
     async def filter_new(self, memos: List[Memo]) -> List[Memo]:
         """
         まだベクトル化されていないメモだけを返す
         """
-        existing_uuids: Set[str] = {cid.split("_", 1)[0] for cid in self._chunk_id_set}
-        return [m for m in memos if m.uuid not in existing_uuids]
+        existing = {cid.split("_", 1)[0] for cid in self._chunk_ids}
+        return [m for m in memos if m.uuid not in existing]
+
+FaissChunkRepository = AsyncFaissChunkRepository

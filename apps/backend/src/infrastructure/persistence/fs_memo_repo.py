@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 import aiofiles
 import numpy as np
-
 from domain.memo import Memo
 from interfaces.repositories.memo_repo import MemoNotFoundError, MemoRepository
 from infrastructure.utils.datetime_jst import now_jst
@@ -18,38 +18,48 @@ logger = logging.getLogger(__name__)
 
 
 class FileSystemMemoRepository(MemoRepository):
-    """非同期ファイル I/O でメモと埋め込みを永続化するリポジトリ"""
+    """非同期ファイル I/O と並列Executorで高速化したメモリポジトリ"""
 
     HEADER_BREAK = "---\n"
-    _SEM_LIMIT = 10  # 同時並列読み込み数
+    _SEM_LIMIT = 20
+    _IO_WORKERS = 20
+    _EMBED_WORKERS = 4
 
     def __init__(self, root: Path):
         self.root = root.expanduser().resolve()
         self.root.mkdir(parents=True, exist_ok=True)
+
+        self._io_executor = ThreadPoolExecutor(max_workers=self._IO_WORKERS)
+        self._embed_executor = ProcessPoolExecutor(max_workers=self._EMBED_WORKERS)
         logger.debug(f"Initialized FileSystemMemoRepository at {self.root}")
 
     async def add(self, memo: Memo) -> None:
-        """新規メモを保存し、embedding があれば .npy にも保存"""
         path = self._build_path(memo)
         path.parent.mkdir(parents=True, exist_ok=True)
+
 
         async with aiofiles.open(path, "w", encoding="utf-8") as fp:
             await fp.write(self._serialize(memo))
 
         if memo.embedding is not None:
-            # NumPy I/O をスレッドプールで実行
-            await asyncio.to_thread(self._save_embedding, memo)
+            loop = asyncio.get_running_loop()
+
+            await loop.run_in_executor(self._embed_executor, self._save_embedding, memo)
 
     async def list_all(self) -> list[Memo]:
-        """全テキストをパス→並列ロード→Memoリスト返却"""
+        """チャンク＆Semaphore でメモを並列ロード"""
         paths = list(self.root.rglob("*.txt"))
         sem = asyncio.Semaphore(self._SEM_LIMIT)
-        tasks = [self._with_semaphore(sem, self._load_memo, p) for p in paths]
+
+        async def load_with_sem(p: Path) -> Optional[Memo]:
+            async with sem:
+                return await self._load_memo(p)
+
+        tasks = [load_with_sem(p) for p in paths]
         results = await asyncio.gather(*tasks)
         return [m for m in results if m is not None]
 
     async def get_by_uuid(self, uuid: str) -> Memo:
-        """UUIDで検索・取得。なければ例外"""
         pattern = f"{uuid}.txt"
         for path in self.root.rglob(pattern):
             memo = await self._load_memo(path)
@@ -58,7 +68,6 @@ class FileSystemMemoRepository(MemoRepository):
         raise MemoNotFoundError(f"Memo with UUID {uuid} not found")
 
     async def update(self, uuid: str, title: str, body: str) -> Memo:
-        """ロック付き上書き＋埋め込み再保存"""
         old = await self.get_by_uuid(uuid)
         updated = Memo(
             uuid=old.uuid,
@@ -78,38 +87,35 @@ class FileSystemMemoRepository(MemoRepository):
                 tmp.write_text(self._serialize(updated), encoding="utf-8")
                 tmp.replace(path)
 
-        await asyncio.to_thread(_sync_replace)
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(self._io_executor, _sync_replace)
 
         if updated.embedding is not None:
-            await asyncio.to_thread(self._save_embedding, updated)
+            await loop.run_in_executor(self._embed_executor, self._save_embedding, updated)
 
         return updated
 
     async def delete(self, uuid: str) -> bool:
-        """メモと .npy を削除"""
         try:
             memo = await self.get_by_uuid(uuid)
         except MemoNotFoundError:
             return False
 
         path = self._build_path(memo)
-        await asyncio.to_thread(path.unlink)
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(self._io_executor, path.unlink)
 
         embed_path = path.with_suffix(".npy")
         if embed_path.exists():
-            await asyncio.to_thread(embed_path.unlink)
+            await loop.run_in_executor(self._io_executor, embed_path.unlink)
 
         return True
 
     # ── Internal ──
 
-    async def _with_semaphore(self, sem: asyncio.Semaphore, fn, arg):
-        async with sem:
-            return await fn(arg)
-
     async def _load_memo(self, path: Path) -> Optional[Memo]:
-        """非同期にファイル読み込み→パース→埋め込みロード"""
         try:
+
             async with aiofiles.open(path, "r", encoding="utf-8") as f:
                 raw = await f.read()
 
@@ -119,7 +125,7 @@ class FileSystemMemoRepository(MemoRepository):
             header, body = raw.split(self.HEADER_BREAK, 1)
             meta = self._parse_header(header)
 
-            # CREATED_AT の正規化
+
             created_str = meta.get("CREATED_AT", "").strip()
             if created_str.endswith("Z"):
                 created_str = created_str[:-1] + "+00:00"
@@ -145,12 +151,15 @@ class FileSystemMemoRepository(MemoRepository):
                 embedding=None,
             )
 
+
             embed_path = path.with_suffix(".npy")
             if embed_path.exists():
-                memo.embedding = await asyncio.to_thread(np.load, str(embed_path))
+                loop = asyncio.get_running_loop()
+                memo.embedding = await loop.run_in_executor(
+                    self._embed_executor, np.load, str(embed_path)
+                )
 
             return memo
-
         except Exception as e:
             logger.warning(f"Failed to load memo from {path}: {e!r}")
             return None
